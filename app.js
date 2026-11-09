@@ -349,7 +349,6 @@
         </div>
         <button class="lime-btn" id="start">Spiel starten</button>`;
     const onl = `
-        <div class="roomline">Raum <b>${ROOM}</b></div>
         <div class="who">${ONLINE_NAMES.map((n, i) => `<button data-slot="${i}" class="${i === slot ? 'on' : ''} ${takenSlots.has(i) ? 'taken' : ''}" ${takenSlots.has(i) ? 'disabled' : ''}>${n}</button>`).join('')}</div>
         ${slot === 3 ? `<div class="names"><input id="guest" maxlength="12" placeholder="Dein Name" value="${h(pick.guest || '')}"></div>` : ''}
         <button class="lime-btn" id="ojoin" ${takenSlots.size >= 4 ? 'disabled' : ''}>Zum Spiel</button>
@@ -392,7 +391,6 @@
       <div class="setup lobby">
         <button class="round snd" id="snd" aria-label="Ton an/aus">${soundIcon()}</button>
         <div><h1>🎲 Yatzy</h1></div>
-        <div class="code" aria-label="Raum">${ROOM}</div>
         <div class="hint2">${h(netStatus || 'Das Spiel startet, sobald alle auf „Start“ tippen.')}</div>
         <div class="lplayers">${rows || '<div class="bempty">Verbinde …</div>'}</div>
         <button class="lime-btn" id="oready" ${me ? '' : 'disabled'}>${iReady ? 'Bereit ✓ (tippen zum Abbrechen)' : 'Start'}</button>
