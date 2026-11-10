@@ -96,7 +96,7 @@
   }
   async function fetchBoard() {
     const c = client(); if (!c) return null;
-    const { data, error } = await c.from('yatzy_leaderboard').select('name,games,wins');
+    const { data, error } = await c.from('yatzy_leaderboard').select('name,games,wins,best');
     return error ? null : data;
   }
 

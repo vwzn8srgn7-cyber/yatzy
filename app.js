@@ -4,7 +4,8 @@
   const PICK_KEY = 'yatzy-online-pick';
   const PENDING_KEY = 'yatzy-pending-results';
   const CLIENT_KEY = 'yatzy-client-id';
-  const ROOM = 'ENGADIN'; // fester Raum, entsteht automatisch beim ersten Beitritt
+  const TEST_ROOM = new URLSearchParams(location.search).get('testroom'); // nur zum Testen: eigener Raum, keine Rangliste
+  const ROOM = TEST_ROOM ? TEST_ROOM.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12) || 'TEST' : 'ENGADIN'; // fester Raum, entsteht automatisch beim ersten Beitritt
   const ONLINE_NAMES = ['Vreni', 'Peter', 'Marco', 'Gast']; // Gast darf einen eigenen Namen eingeben
   const app = document.getElementById('app');
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -92,7 +93,7 @@
   }
   // Pro Spiel nur einmal melden (auch nach Reload oder Wiederverbinden)
   function maybeRecord() {
-    if (state.phase !== 'over' || state.players.length < 2 || state.recordedId === state.gameId) return;
+    if (TEST_ROOM || state.phase !== 'over' || state.players.length < 2 || state.recordedId === state.gameId) return;
     state.recordedId = state.gameId;
     save();
     const totals = state.players.map((p) => total(p.scores));
@@ -101,6 +102,32 @@
     setPending([...pendingList(), { gameId: state.gameId, rows }]);
     flushPending().then(refreshBoard);
   }
+  // Rekorde vor dem Spiel merken, damit am Ende ein neuer Rekord erkannt wird (auf allen Geräten gleich)
+  function snapshotBest() {
+    const gid = state.gameId;
+    Net.fetchBoard().then((d) => {
+      if (!d || state.gameId !== gid) return;
+      state.prevBest = Object.fromEntries(d.map((r) => [r.name.toLowerCase(), r.best]));
+      save();
+    });
+  }
+  function newRecords() {
+    const prev = state.prevBest;
+    if (!prev || state.players.length < 2) return [];
+    return state.players.map((p) => ({ name: p.name, score: total(p.scores) }))
+      .filter((r) => prev[r.name.toLowerCase()] !== undefined && r.score > prev[r.name.toLowerCase()]);
+  }
+  function clearFx() { document.querySelectorAll('.rec-fx,.turn-toast').forEach((e) => e.remove()); }
+  function showRecord(recs) {
+    const el = document.createElement('div');
+    el.className = 'rec-fx';
+    const conf = Array.from({ length: 36 }, (_, i) => `<i style="left:${Math.round(Math.random() * 100)}%;background:${COLORS[i % 4]};animation-delay:${(Math.random() * 0.9).toFixed(2)}s;--dx:${Math.round(Math.random() * 140 - 70)}px"></i>`).join('');
+    el.innerHTML = `${conf}<div class="rec-box"><div class="rec-t">🏆 Neuer Rekord</div>${recs.map((r) => `<div class="rec-n">${h(r.name)}</div><div class="rec-s">${r.score}</div>`).join('')}</div>`;
+    document.body.appendChild(el);
+    Sfx.yatzy();
+    setTimeout(() => el.remove(), 4200);
+  }
+
   function boardRows() {
     return (boardData || [])
       .map((s) => ({ ...s, pct: Math.round((100 * s.wins) / s.games) }))
@@ -110,9 +137,9 @@
   function boardHTML() {
     const top = boardRows();
     const rows = top.length
-      ? top.map((s, i) => `<div class="brow"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span></div>`).join('')
+      ? top.map((s, i) => `<div class="brow"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
       : `<div class="bempty">${boardData ? 'Noch keine Spiele gespielt' : 'Lade …'}</div>`;
-    return `<div class="board"><div class="bt">Rangliste · Siege (alle)</div>${rows}</div>`;
+    return `<div class="board"><div class="bt">Rangliste · Siege / Rekord</div>${rows}</div>`;
   }
   async function refreshBoard() {
     const data = await Net.fetchBoard();
@@ -148,6 +175,7 @@
 
   function leaveRoom(msg) {
     Net.leave();
+    clearFx();
     lobby = []; onlineIds = new Set(); offSince = 0;
     setupError = msg || '';
     justRolled = []; busy = false;
@@ -181,7 +209,9 @@
       current: 0, dice: EMPTY_DICE(), held: NO_HOLD(), rollsLeft: 3, gameId: m.gameId, seq: 0,
     };
     justRolled = []; busy = false; offSince = 0;
+    clearFx();
     save(); render();
+    snapshotBest();
     if (isMyTurn()) Sfx.turn();
   }
 
@@ -263,7 +293,9 @@
     }));
     state = { setup: state.setup, phase: 'game', players, current: 0, dice: EMPTY_DICE(), held: NO_HOLD(), rollsLeft: 3, gameId: rid(), seq: 0 };
     justRolled = []; busy = false;
+    clearFx();
     save(); render();
+    snapshotBest();
   }
 
   function roll() {
@@ -330,6 +362,15 @@
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
   }
+  const LOGO_COLORS = ['#2e8bd0', '#e0485a', '#f2c14e', '#4caf50', '#2e8bd0'];
+  const LOGO_TILT = [-6, 4, -3, 5, -4];
+  function logoHTML() {
+    const die = `<svg class="logo-die" viewBox="0 0 64 64" aria-hidden="true"><g transform="rotate(-12 32 32)">
+      <rect x="7" y="11" width="50" height="50" rx="13" fill="#0e4a29" opacity=".3"/><rect x="7" y="8" width="50" height="50" rx="13" fill="#b9c8b2"/><rect x="7" y="5" width="50" height="50" rx="13" fill="#fff"/>
+      <circle cx="21" cy="19" r="5.2" fill="#2e8bd0"/><circle cx="43" cy="19" r="5.2" fill="#e0485a"/><circle cx="32" cy="30" r="5.2" fill="#1c1917"/><circle cx="21" cy="41" r="5.2" fill="#f2c14e"/><circle cx="43" cy="41" r="5.2" fill="#4caf50"/></g></svg>`;
+    const word = [...'YATZY'].map((c, i) => `<span style="--lc:${LOGO_COLORS[i]};--rot:${LOGO_TILT[i]}deg">${c}</span>`).join('');
+    return `<div class="logo" role="img" aria-label="Yatzy">${die}<div class="wm">${word}</div></div>`;
+  }
   function wireSound() {
     document.getElementById('snd').onclick = (e) => {
       Sfx.setOn(!Sfx.isOn());
@@ -356,8 +397,8 @@
     app.innerHTML = `
       <div class="setup">
         <button class="round snd" id="snd" aria-label="Ton an/aus">${soundIcon()}</button>
-        <div><h1>🎲 Yatzy</h1></div>
-        <div class="modes"><button data-mode="online" class="${setupMode === 'online' ? 'on' : ''}">Online</button><button data-mode="local" class="${setupMode === 'local' ? 'on' : ''}">Ein Gerät</button></div>
+        ${logoHTML()}
+        <div class="modes"><button data-mode="online" class="${setupMode === 'online' ? 'on' : ''}">Online</button><button data-mode="local" class="${setupMode === 'local' ? 'on' : ''}">Offline</button></div>
         ${setupMode === 'local' ? local : onl}
         ${boardHTML()}
       </div>`;
@@ -390,7 +431,7 @@
     app.innerHTML = `
       <div class="setup lobby">
         <button class="round snd" id="snd" aria-label="Ton an/aus">${soundIcon()}</button>
-        <div><h1>🎲 Yatzy</h1></div>
+        ${logoHTML()}
         <div class="hint2">${h(netStatus || 'Das Spiel startet, sobald alle auf „Start“ tippen.')}</div>
         <div class="lplayers">${rows || '<div class="bempty">Verbinde …</div>'}</div>
         <button class="lime-btn" id="oready" ${me ? '' : 'disabled'}>${iReady ? 'Bereit ✓ (tippen zum Abbrechen)' : 'Start'}</button>
@@ -433,7 +474,7 @@
     const mine = isMyTurn();
     const curColor = COLORS[state.current];
     const curName = state.players[state.current].name;
-    const actives = rolled && state.phase === 'game'; // Blasen sieht jeder, antippen darf nur wer dran ist
+    const actives = rolled && state.phase === 'game'; // Vorschau für alle: Blasen für den, der dran ist, Zahlen für die anderen
     let optIndex = 0;
 
     const hdr = `<div class="hdr"><span></span>${state.players.map((p, i) => `<span class="hb ${i === state.current && state.phase === 'game' ? 'on' : ''} ${offline(p) ? 'off' : ''}" style="--pc:${COLORS[i]}"><i>${h(initial(p))}</i></span>`).join('')}${pad('<span class="hb"></span>')}</div>`;
@@ -449,8 +490,12 @@
         const cv = cellValue(p, id);
         let inner = cv.v;
         if (free && isCur) {
-          const side = optIndex++ % 2 === 0 ? 'L' : 'R';
-          inner = `<button class="bubble ${side} ${s ? '' : 'zero'} ${mine ? '' : 'ro'}" data-cat="${id}">${s}</button>`;
+          if (mine) {
+            const side = optIndex++ % 2 === 0 ? 'L' : 'R';
+            inner = `<button class="bubble ${side} ${s ? '' : 'zero'}" data-cat="${id}">${s}</button>`;
+          } else {
+            inner = `<span class="peek ${s ? '' : 'zero'}">${s}</span>`; // Mitspieler sehen nur die Zahl
+          }
         }
         return `<div class="c ${isCur ? 'act' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
       }).join('') + pad('<div class="c"></div>');
@@ -559,6 +604,8 @@
       <div class="others">${rest.map((r) => `<div class="orow">${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
     document.body.appendChild(el);
+    const recs = newRecords();
+    if (recs.length && state.recShown !== state.gameId) { state.recShown = state.gameId; save(); showRecord(recs); }
     el.querySelector('#again').onclick = () => {
       el.remove();
       if (isOnline()) startOnlineGame(state.players);
@@ -590,6 +637,7 @@
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
+    if (state.phase !== 'game') document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
     updateOfflinePop();
   }
 

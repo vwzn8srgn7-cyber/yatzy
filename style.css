@@ -255,3 +255,40 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 .who button.taken { opacity: .35; text-decoration: line-through; }
 .who button:disabled { cursor: not-allowed; }
+
+/* Mitspieler sehen nur die Zahl */
+.peek { font-weight: 700; color: color-mix(in srgb, var(--pc) 75%, #000); font-size: clamp(12px, 3.8vw, 16px); }
+.peek.zero { color: #8a8f8a; font-weight: 500; }
+
+/* Gehaltene Würfel liegen gerade */
+.die { transition: transform .2s, box-shadow .15s, background .15s; }
+.die.held { transform: translateX(0) rotate(0deg); }
+
+/* Logo */
+.logo { display: flex; align-items: center; gap: 10px; padding-right: 64px; }
+.logo-die { width: 62px; height: 62px; flex: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
+.wm { display: flex; }
+.wm span {
+  font: 900 50px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Avenir Next", system-ui, sans-serif;
+  color: #fff; display: inline-block; letter-spacing: -1px;
+  transform: rotate(var(--rot)) translateY(calc(var(--rot) * -.25));
+  text-shadow: 0 3px 0 var(--lc), 0 6px 0 rgba(0,0,0,.18), 0 10px 14px rgba(0,0,0,.2);
+}
+
+/* Rangliste: Rekord */
+.brow .br { font-size: 13px; opacity: .75; margin-left: 4px; min-width: 78px; text-align: right; }
+
+/* Neuer Rekord */
+.rec-fx { position: fixed; inset: 0; z-index: 50; pointer-events: none; overflow: hidden; animation: recfade 4.2s ease forwards; }
+.rec-fx i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: confetti 2.6s ease-in forwards; }
+@keyframes confetti { to { transform: translate(var(--dx), 105vh) rotate(720deg); } }
+@keyframes recfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.rec-box {
+  position: absolute; left: 50%; top: 40%; translate: -50% -50%; text-align: center; color: #fff; padding: 22px 34px; border-radius: 26px;
+  background: radial-gradient(circle, #f59e0b, #b45309); box-shadow: 0 0 60px 16px rgba(255,200,60,.6), 0 10px 30px rgba(0,0,0,.4);
+  animation: recpop .6s cubic-bezier(.2, 1.4, .4, 1);
+}
+.rec-t { font-weight: 900; letter-spacing: 1px; text-transform: uppercase; font-size: 20px; }
+.rec-n { font-size: 26px; font-weight: 800; margin-top: 8px; }
+.rec-s { font-size: 64px; font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0,0,0,.25); }
+@keyframes recpop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
