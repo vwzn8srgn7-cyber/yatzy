@@ -531,12 +531,12 @@
         if (free && isCur) {
           if (mine) {
             const side = optIndex++ % 2 === 0 ? 'L' : 'R';
-            inner = `<button class="bubble ${side} ${s ? '' : 'zero'}" data-cat="${id}">${s}</button>`;
+            inner = `<button class="bubble ${side} ${s ? '' : 'zero'}" data-cat="${id}">${s}</button>${s ? `<span class="peek">${s}</span>` : ''}`; // Blase und Zahl im Feld
           } else {
             inner = s ? `<span class="peek">${s}</span>` : ''; // Mitspieler sehen nur Zahlen, keine Nullen
           }
         }
-        return `<div class="c ${isCur ? 'act' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" data-cell="${i}:${id}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
+        return `<div class="c ${isCur ? 'act' : ''} ${free && isCur && s > 0 ? 'optc' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" data-cell="${i}:${id}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
       }).join('') + pad('<div class="c"></div>');
       const cls = ['row', free && s > 0 ? 'opt' : '', id === '_bonus' ? 'rule' : '', id === '_sum' || id === '_total' ? 'top3' : '', id === 'sixes' || id === 'yatzy' ? 'nob' : '', id === '_sum' || id === '_total' ? 'strong' : ''].join(' ');
       return `<div class="${cls}" style="--n:${cols}"><div class="lab">${label(id)}</div>${cells}</div>`;

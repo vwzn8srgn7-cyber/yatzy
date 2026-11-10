@@ -311,3 +311,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 .peek.picked { font-weight: 800; font-size: clamp(14px, 4.4vw, 18px); }
 @media (prefers-reduced-motion: reduce) { .round.big.pulse::before, .pl.cur .avatar::after, .hb.on i { animation: none; } }
+
+/* Punktzahl im Feld: weiss auf kräftiger Spielerfarbe (Gegner und aktiver Spieler) */
+.peek { color: var(--pt, #fff); text-shadow: 0 1px 2px rgba(0,0,0,.3); font-weight: 700; }
+.row .c.optc.act { background: color-mix(in srgb, var(--pc) 62%, white); }
