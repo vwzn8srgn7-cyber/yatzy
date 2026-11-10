@@ -139,7 +139,7 @@
     const rows = top.length
       ? top.map((s, i) => `<div class="brow"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
       : `<div class="bempty">${boardData ? 'Noch keine Spiele gespielt' : 'Lade …'}</div>`;
-    return `<div class="board"><div class="bt">Rangliste · Siege / Rekord</div>${rows}</div>`;
+    return `<div class="board"><div class="bt"><span>Rangliste</span><span class="bcap">(Siege in Prozent)</span></div>${rows}</div>`;
   }
   async function refreshBoard() {
     const data = await Net.fetchBoard();
@@ -303,7 +303,7 @@
     const dice = state.dice.map((d, i) => (state.held[i] && d ? d : 1 + Math.floor(Math.random() * 6)));
     justRolled = dice.map((_, i) => !(state.held[i] && state.dice[i]));
     tilts = tilts.map((t, i) => (justRolled[i] ? newTilt() : t));
-    const held = state.rollsLeft === 1 ? NO_HOLD() : state.held;
+    const held = state.held; // gehaltene Würfel bleiben auch nach dem letzten Wurf gerade
     set({ dice, held, rollsLeft: state.rollsLeft - 1, seq: state.seq + 1 });
     broadcastState(justRolled);
     Sfx.roll();
@@ -371,6 +371,17 @@
     const word = [...'YATZY'].map((c, i) => `<span style="--lc:${LOGO_COLORS[i]};--rot:${LOGO_TILT[i]}deg">${c}</span>`).join('');
     return `<div class="logo" role="img" aria-label="Yatzy">${die}<div class="wm">${word}</div></div>`;
   }
+  async function shareApp() {
+    const url = location.origin + location.pathname; // ohne Zusätze wie ?testroom
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Yatzy', text: 'Spiel mit uns Yatzy!', url }); return; }
+      await navigator.clipboard.writeText(url);
+      const t = document.createElement('div');
+      t.className = 'turn-toast'; t.style.setProperty('--pc', '#9edb2a'); t.textContent = 'Link kopiert ✓';
+      t.onanimationend = () => t.remove();
+      document.body.appendChild(t);
+    } catch { /* abgebrochen */ }
+  }
   function wireSound() {
     document.getElementById('snd').onclick = (e) => {
       Sfx.setOn(!Sfx.isOn());
@@ -397,6 +408,7 @@
     app.innerHTML = `
       <div class="setup">
         <button class="round snd" id="snd" aria-label="Ton an/aus">${soundIcon()}</button>
+        <button class="round snd share" id="share" aria-label="Link teilen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3.5M7.5 8 12 3.5 16.5 8"/><path d="M6 11H5.5A1.5 1.5 0 0 0 4 12.5v6A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5H18"/></svg></button>
         ${logoHTML()}
         <div class="modes"><button data-mode="online" class="${setupMode === 'online' ? 'on' : ''}">Online</button><button data-mode="local" class="${setupMode === 'local' ? 'on' : ''}">Offline</button></div>
         ${setupMode === 'local' ? local : onl}
@@ -404,6 +416,7 @@
       </div>`;
     app.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => { setupError = ''; setupMode = b.dataset.mode; render(); });
     wireSound();
+    document.getElementById('share').onclick = shareApp;
     if (setupMode === 'local') {
       app.querySelectorAll('[data-count]').forEach((b) => b.onclick = () => set({ setup: { ...state.setup, count: +b.dataset.count } }));
       app.querySelectorAll('[data-name]').forEach((inp) => inp.oninput = () => {
@@ -494,7 +507,7 @@
             const side = optIndex++ % 2 === 0 ? 'L' : 'R';
             inner = `<button class="bubble ${side} ${s ? '' : 'zero'}" data-cat="${id}">${s}</button>`;
           } else {
-            inner = `<span class="peek ${s ? '' : 'zero'}">${s}</span>`; // Mitspieler sehen nur die Zahl
+            inner = s ? `<span class="peek">${s}</span>` : ''; // Mitspieler sehen nur Zahlen, keine Nullen
           }
         }
         return `<div class="c ${isCur ? 'act' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
@@ -595,7 +608,7 @@
     const el = document.createElement('div');
     el.className = 'win';
     el.innerHTML = `${leaves}
-      <button class="round menu-btn" id="wmenu" aria-label="${isOnline() ? 'Raum verlassen' : 'Neues Spiel mit anderen Spielern'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+      <button class="round menu-btn" id="wmenu" aria-label="Zur Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h4.5v-5.5h3V20H18v-9.5"/></svg></button>
       ${crownSVG()}
       <div class="big-avatar" style="background:${COLORS[w.i]}">${h(initial(w.p))}</div>
       <div class="banner">${ranked.length > 1 ? 'GEWINNER' : 'FERTIG'}</div>

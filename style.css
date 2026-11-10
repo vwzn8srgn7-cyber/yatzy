@@ -292,3 +292,18 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .rec-n { font-size: 26px; font-weight: 800; margin-top: 8px; }
 .rec-s { font-size: 64px; font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0,0,0,.25); }
 @keyframes recpop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Rangliste: Spalten und Kopfzeile */
+.brow { display: grid; grid-template-columns: 30px 1fr 64px 84px; align-items: center; gap: 8px; }
+.brow .bp { text-align: right; }
+.brow .br { margin-left: 0; min-width: 0; }
+.board .bt { display: grid; grid-template-columns: 30px 1fr 64px 84px; gap: 8px; align-items: end; text-transform: none; letter-spacing: 0; opacity: 1; }
+.board .bt > span:first-child { font-size: 14px; letter-spacing: .5px; text-transform: uppercase; opacity: .8; font-weight: 700; grid-column: 1 / 3; }
+.board .bcap { grid-column: 3 / 4; justify-self: end; white-space: nowrap; font-size: 13px; font-weight: 400; opacity: .75; }
+
+/* Startseite: Teilen-Button links neben dem Ton-Button, Logo etwas kleiner */
+.setup .snd.share { right: 78px; }
+.logo { padding-right: 0; }
+.logo-die { width: 54px; height: 54px; }
+.wm span { font-size: min(50px, 11.2vw); }
+.menu-btn svg { width: 60%; height: 60%; }
