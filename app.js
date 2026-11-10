@@ -31,6 +31,8 @@
   let state = load() || { phase: 'setup', setup: { count: 1, names: DEFAULT_NAMES.slice() } };
   let setupMode = 'online';  // beim Start immer „Online“
   let justRolled = [];
+  let pendingRoll = null;   // Wurf, der als 3D-Animation gezeigt werden soll (einmalig)
+  const has3d = () => !!window.Dice3D;
   let tilts = [0, 1, 2, 3, 4].map(() => newTilt());
   let busy = false;
   let lobby = [];            // Presence-Liste des Raums
@@ -270,10 +272,11 @@
     const wasMine = isMyTurn();
     justRolled = m.rolled || [];
     tilts = tilts.map((t, i) => (justRolled[i] ? newTilt() : t));
+    pendingRoll = justRolled.some(Boolean) && s.dice.some(Boolean) ? { values: s.dice.slice(), mask: justRolled.slice() } : null;
     state = { ...state, ...s };
     busy = false;
     // Töne für Züge der anderen
-    if (s.current === prev.current && s.rollsLeft < prev.rollsLeft) Sfx.roll();
+    if (s.current === prev.current && s.rollsLeft < prev.rollsLeft) { if (!has3d()) Sfx.roll(); }
     else if (s.current !== prev.current || (s.phase === 'over' && prev.phase !== 'over')) {
       if (!pickPlayed) { // Ton nur, falls die Auswahl-Meldung nicht angekommen ist
         const who = prev.players[prev.current];
@@ -324,13 +327,15 @@
 
   function roll() {
     if (state.rollsLeft === 0 || state.phase !== 'game' || busy || !isMyTurn()) return;
+    if (has3d() && Dice3D.busy()) return;   // erst wenn die Würfel liegen
     const dice = state.dice.map((d, i) => (state.held[i] && d ? d : 1 + Math.floor(Math.random() * 6)));
     justRolled = dice.map((_, i) => !(state.held[i] && state.dice[i]));
     tilts = tilts.map((t, i) => (justRolled[i] ? newTilt() : t));
     const held = state.held; // gehaltene Würfel bleiben auch nach dem letzten Wurf gerade
+    pendingRoll = { values: dice.slice(), mask: justRolled.slice() };
     set({ dice, held, rollsLeft: state.rollsLeft - 1, seq: state.seq + 1 });
     broadcastState(justRolled);
-    Sfx.roll();
+    if (has3d()) Sfx.rollHaptic(); else Sfx.roll();   // mit 3D-Würfeln kommt der Ton vom Aufprall
   }
 
   function toggleHold(i) {
@@ -551,7 +556,7 @@
         <section class="card" style="--ac:${curColor};--n:${cols}">${hdr}${header}${rows}</section>
         <aside class="side">
           <div class="players">${players}</div>
-          <div class="dice">${state.dice.map(dieHTML).join('')}</div>
+          <div class="dice" id="diceArea">${has3d() ? '' : state.dice.map(dieHTML).join('')}</div>
           <div class="btns">
             <button class="round big ${rolled || !mine ? '' : 'pulse'}" id="roll" aria-label="Würfeln" ${state.rollsLeft === 0 || state.phase !== 'game' || !mine ? 'disabled' : ''}>
               <span class="nm" style="font-size:${curName.length <= 5 ? 21 : curName.length <= 7 ? 17 : 13}px">${h(curName)}</span>
@@ -563,6 +568,11 @@
       </div>`;
 
     app.querySelectorAll('[data-die]').forEach((b) => b.onclick = () => toggleHold(+b.dataset.die));
+    if (has3d()) {   // 3D-Würfel: eine dauerhafte Zeichenfläche, die bei jedem Neuaufbau in den neuen Würfelbereich umzieht
+      Dice3D.mount(document.getElementById('diceArea'));
+      if (pendingRoll) { const r = pendingRoll; pendingRoll = null; Dice3D.roll(r.values, r.mask); }
+      else Dice3D.setDice(state.dice, state.held);
+    }
     app.querySelectorAll('[data-cat]').forEach((b) => b.onclick = () => choose(b.dataset.cat, b));
     document.getElementById('roll').onclick = roll;
     document.getElementById('menu').onclick = openMenu;
@@ -683,6 +693,10 @@
     if (state.phase !== 'game') document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
     updateOfflinePop();
   }
+
+  // 3D-Würfel werden als eigenes Modul geladen; sobald sie bereit sind, zeichnet sich das Spiel einmal neu
+  window.addEventListener('dice3d-ready', () => { Dice3D.onTap((i) => toggleHold(i)); if (state.phase === 'game' || state.phase === 'over') render(); });
+  if (window.Dice3D) Dice3D.onTap((i) => toggleHold(i));
 
   // Nach Reload wieder in den Raum, falls ein Online-Spiel offen war
   if (state.online && state.phase !== 'setup') connectOnline();

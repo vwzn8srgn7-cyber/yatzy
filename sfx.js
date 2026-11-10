@@ -86,6 +86,25 @@
       buzz([15, 40, 15]);
     },
     turn() { tone(784, 0, 0.12, { vol: 0.16 }); tone(1047, 0.1, 0.22, { vol: 0.16 }); buzz(20); },
+    // Würfel-Aufprall (3D-Würfel): dumpfer Schlag plus kurzes Klacken; delay in Sekunden ab jetzt, imp = Stärke 0..1
+    knock(delay, imp) {
+      const a = ctx(); if (!a) return;
+      const t0 = a.currentTime + Math.max(0, delay);
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(190 + (Math.random() - .5) * 50, t0); o.frequency.exponentialRampToValueAtTime(70, t0 + 0.09);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.45 * imp + 0.02, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+      o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + 0.13);
+      if (!noiseBuf) {
+        noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 0.06), a.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      const src = a.createBufferSource(); src.buffer = noiseBuf;
+      const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500 + (Math.random() - .3) * 700; f.Q.value = 1.1;
+      const g2 = a.createGain(); g2.gain.setValueAtTime(0.32 * imp, t0); g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+      src.connect(f); f.connect(g2); g2.connect(a.destination); src.start(t0);
+    },
+    rollHaptic() { buzz([15, 40, 15]); },
     hold() { tone(880, 0, 0.05, { type: 'triangle', vol: 0.12 }); buzz(8); },
     score(points) {
       if (points > 0) { tone(660, 0, 0.12); tone(990, 0.08, 0.18); }
