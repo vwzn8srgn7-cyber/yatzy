@@ -41,6 +41,10 @@
   let setupError = '';
   let boardData = null;      // gemeinsame Rangliste (aus der Datenbank)
   let offSince = 0;          // seit wann ist der aktive Spieler offline?
+  let chatShow = {};         // Nachrichten, die gerade bei einem Avatar angezeigt werden: Platz -> { kind, value, until }
+  let chatTimer = null, lastChatSent = 0;
+  const CHAT_TEXTS = ['Gut gespielt!', 'Viel Glück!', 'Danke!', 'Wow!', 'Gutes Spiel!', 'Ups!'];
+  const CHAT_EMOJIS = ['😁', '😜', '😮', '😢', '😠'];
   let takenSlots = new Set(); // Namen, die im Raum schon vergeben sind
 
   function newTilt() { return { r: Math.round(Math.random() * 70 - 35), x: Math.round(Math.random() * 28 - 14) }; }
@@ -105,10 +109,11 @@
     flushPending().then(refreshBoard);
   }
   // Rekorde vor dem Spiel merken, damit am Ende ein neuer Rekord erkannt wird (auf allen Geräten gleich)
-  function snapshotBest() {
+  function snapshotBest(tries = 0) {
     const gid = state.gameId;
     Net.fetchBoard().then((d) => {
-      if (!d || state.gameId !== gid) return;
+      if (state.gameId !== gid) return;
+      if (!d) { if (tries < 3) setTimeout(() => snapshotBest(tries + 1), 2000); return; }   // kurzer Netzaussetzer: noch ein paar Mal versuchen
       state.prevBest = Object.fromEntries(d.map((r) => [r.name.toLowerCase(), r.best]));
       save();
     });
@@ -227,6 +232,8 @@
     } else if (m.t === 'hello') {
       // Nur Mitspieler des laufenden Spiels bekommen den Stand (beim Wiederverbinden), nicht Fremde in der Lobby
       if (state.gameId && (state.phase === 'game' || state.phase === 'over') && state.players.some((p) => p.id === m.id)) broadcastState([]);
+    } else if (m.t === 'chat') {
+      if (m.gameId === state.gameId && state.phase !== 'lobby') showChat(m.seat, m.kind, m.value);
     } else if (m.t === 'pick') {
       showPick(m);
     } else if (m.t === 'nudge') {
@@ -508,6 +515,43 @@
     return { v: p.scores[id] !== undefined ? p.scores[id] : '' };
   }
 
+  // ---------- Nachrichten und Emojis (online): erscheinen kurz beim Avatar des Absenders ----------
+  const liveChat = (i) => (chatShow[i] && chatShow[i].until > Date.now() ? chatShow[i] : null);
+  function showChat(seat, kind, value) {
+    if (!state.players || seat < 0 || seat >= state.players.length) return;
+    if (kind === 'text' ? !CHAT_TEXTS.includes(value) : !CHAT_EMOJIS.includes(value)) return;   // nur bekannte Nachrichten annehmen
+    chatShow[seat] = { kind, value, until: Date.now() + 3200 };
+    Sfx.chat();
+    if (state.phase === 'game' || state.phase === 'over') render();
+    clearTimeout(chatTimer);
+    chatTimer = setTimeout(function tick() {
+      const now = Date.now(); let left = 0;
+      Object.keys(chatShow).forEach((k) => { if (chatShow[k].until <= now) delete chatShow[k]; else left++; });
+      if (state.phase === 'game' || state.phase === 'over') render();
+      if (left) chatTimer = setTimeout(tick, 400);
+    }, 3300);
+  }
+  function sendChat(kind, value) {
+    const now = Date.now();
+    if (!state.online || now - lastChatSent < 1200) return;   // höchstens eine Nachricht alle 1,2 Sekunden
+    lastChatSent = now;
+    const seat = state.players.findIndex((p) => p.id === myId);
+    if (seat < 0) return;
+    Net.send({ t: 'chat', gameId: state.gameId, seat, kind, value });
+    showChat(seat, kind, value);
+  }
+  function openChat() {
+    const el = document.createElement('div');
+    el.className = 'pop-overlay';
+    el.innerHTML = `<div class="chat-pop">
+      <div class="ct">${CHAT_TEXTS.map((t) => `<button data-t="${h(t)}">${h(t)}</button>`).join('')}</div>
+      <div class="ce">${CHAT_EMOJIS.map((e) => `<button data-e="${e}" aria-label="Emoji">${e}</button>`).join('')}</div></div>`;
+    document.body.appendChild(el);
+    el.onclick = (e) => { if (e.target === el) el.remove(); };
+    el.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { el.remove(); sendChat('text', b.dataset.t); });
+    el.querySelectorAll('[data-e]').forEach((b) => b.onclick = () => { el.remove(); sendChat('emoji', b.dataset.e); });
+  }
+
   const offline = (p) => state.online && onlineIds.size > 0 && p.id !== myId && !onlineIds.has(p.id);
 
   function renderGame() {
@@ -547,9 +591,13 @@
       return `<div class="${cls}" style="--n:${cols}"><div class="lab">${label(id)}</div>${cells}</div>`;
     }).join('');
 
-    const players = state.players.map((p, i) => `
-      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}">${avatar(p, i)}
-        <div style="min-width:0"><div class="nm">${h(p.name)}</div><div class="dot" style="background:${COLORS[i]}"></div></div></div>`).join('');
+    const players = state.players.map((p, i) => {
+      const c = liveChat(i);
+      return `
+      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}">${c && c.kind === 'emoji' ? `<div class="avatar emoji">${c.value}</div>` : avatar(p, i)}
+        <div style="min-width:0"><div class="nm">${h(p.name)}</div><div class="dot" style="background:${COLORS[i]}"></div></div>
+        ${c && c.kind === 'text' ? `<div class="chat-bubble">${h(c.value)}</div>` : ''}</div>`;
+    }).join('');
 
     app.innerHTML = `
       <div class="game ${n >= 4 ? 'many' : 'few'}">
@@ -562,7 +610,10 @@
               <span class="nm" style="font-size:${curName.length <= 5 ? 21 : curName.length <= 7 ? 17 : 13}px">${h(curName)}</span>
               <span class="badge">${state.rollsLeft}</span>
             </button>
-            <button class="round" id="menu" aria-label="Menü"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+            <div class="sm">
+              ${state.online ? '<button class="round" id="chat" aria-label="Nachricht"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2.5 6.6 2.5 11c0 2.3 1.1 4.3 2.9 5.7L4.6 21l4.3-2.2c1 .3 2 .4 3.1.4 5.5 0 9.5-3.6 9.5-8S17.5 3 12 3z"/></svg></button>' : ''}
+              <button class="round" id="menu" aria-label="Menü"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+            </div>
           </div>
         </aside>
       </div>`;
@@ -576,6 +627,7 @@
     app.querySelectorAll('[data-cat]').forEach((b) => b.onclick = () => choose(b.dataset.cat, b));
     document.getElementById('roll').onclick = roll;
     document.getElementById('menu').onclick = openMenu;
+    const chatBtn = document.getElementById('chat'); if (chatBtn) chatBtn.onclick = openChat;
   }
 
   // Hinweis für alle, wenn der Spieler, der dran ist, offline ist (erst nach 2 Sekunden, damit kurze Aussetzer nicht stören)
@@ -698,9 +750,19 @@
   window.addEventListener('dice3d-ready', () => { Dice3D.onTap((i) => toggleHold(i)); if (state.phase === 'game' || state.phase === 'over') render(); });
   if (window.Dice3D) Dice3D.onTap((i) => toggleHold(i));
 
+  function hideSplash() {
+    clearTimeout(window.__splashTimer);
+    const s = document.getElementById('splash');
+    if (!s) return;
+    s.classList.add('out');
+    setTimeout(() => s.remove(), 300);
+  }
+
   // Nach Reload wieder in den Raum, falls ein Online-Spiel offen war
   if (state.online && state.phase !== 'setup') connectOnline();
   render();
+  const splashParam = new URLSearchParams(location.search).get('splash');   // ?splash=8 zeigt den Ladebildschirm 8 Sekunden lang (zum Ansehen)
+  setTimeout(hideSplash, splashParam === null ? 0 : (Number(splashParam) || 2.5) * 1000);
   flushPending().then(refreshBoard);
 
   // Heilt verlorene Nachrichten: alle melden ihren Stand, wer mehr weiss, schickt ihn

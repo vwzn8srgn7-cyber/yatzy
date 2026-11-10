@@ -322,3 +322,25 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .game.few .btns { flex-direction: row-reverse; align-items: flex-end; justify-content: center; gap: 8px; padding: 0 0 6px; }
 .game.few .btns .round.big { width: 80px; height: 80px; }
 .game.few .btns .round:not(.big) { width: 46px; height: 46px; }
+
+/* Nachrichten und Emojis */
+.btns .sm { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.game.many .btns .sm { flex-direction: row; gap: 6px; }
+.game.many .btns .round:not(.big) { width: 40px; height: 40px; }
+.btns .round svg { width: 56%; height: 56%; }
+.pl { position: relative; }
+.avatar.emoji { background: #ffd34d !important; font-size: 25px; line-height: 1; border-color: #fff; }
+.chat-bubble {
+  position: absolute; left: 50px; top: -6px; z-index: 6; max-width: 150px; padding: 6px 10px; border-radius: 8px;
+  background: rgba(32, 56, 44, .88); color: #fff; font-size: 15px; line-height: 1.2; white-space: nowrap;
+  animation: bubbleIn .18s ease-out;
+}
+.chat-bubble::before { content: ""; position: absolute; left: -6px; top: 14px; border: 6px solid transparent; border-right-color: rgba(32, 56, 44, .88); border-left: 0; }
+@keyframes bubbleIn { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.chat-pop { background: #fff; border-radius: 14px; padding: 12px 10px 8px; width: min(92vw, 420px); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.chat-pop .ct { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+.chat-pop .ct button { background: none; color: #5b8a24; font-weight: 600; font-size: 21px; padding: 13px 4px; border-radius: 10px; }
+.chat-pop .ct button:active { background: #eef6e4; }
+.chat-pop .ce { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+.chat-pop .ce button { background: none; font-size: 40px; line-height: 1; padding: 4px 6px; border-radius: 12px; }
+.chat-pop .ce button:active { background: #f3f3f3; }
