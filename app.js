@@ -111,12 +111,13 @@
       save();
     });
   }
-  function newRecords() {
+  function calcRecords(players) {
     const prev = state.prevBest;
-    if (!prev || state.players.length < 2) return [];
-    return state.players.map((p) => ({ name: p.name, score: total(p.scores) }))
+    if (!prev || players.length < 2) return [];
+    return players.map((p) => ({ name: p.name, score: total(p.scores) }))
       .filter((r) => prev[r.name.toLowerCase()] !== undefined && r.score > prev[r.name.toLowerCase()]);
   }
+  const newRecords = () => calcRecords(state.players);
   function clearFx() { document.querySelectorAll('.rec-fx,.turn-toast').forEach((e) => e.remove()); }
   function showRecord(recs) {
     const el = document.createElement('div');
@@ -150,8 +151,8 @@
 
   // ---------- Online: Verbindung & Nachrichten ----------
   const pub = () => {
-    const { players, current, dice, held, rollsLeft, phase, gameId, seq } = state;
-    return { players, current, dice, held, rollsLeft, phase, gameId, seq };
+    const { players, current, dice, held, rollsLeft, phase, gameId, seq, records } = state;
+    return { players, current, dice, held, rollsLeft, phase, gameId, seq, records };
   };
   function broadcastState(rolled) {
     if (state.online) Net.send({ t: 'state', s: pub(), rolled: rolled || [] });
@@ -224,9 +225,29 @@
     } else if (m.t === 'hello') {
       // Nur Mitspieler des laufenden Spiels bekommen den Stand (beim Wiederverbinden), nicht Fremde in der Lobby
       if (state.gameId && (state.phase === 'game' || state.phase === 'over') && state.players.some((p) => p.id === m.id)) broadcastState([]);
+    } else if (m.t === 'pick') {
+      showPick(m);
+    } else if (m.t === 'nudge') {
+      if (m.gameId === state.gameId && state.phase === 'game' && !isMyTurn()) showTurnToast(`${state.players[state.current].name} ist dran`, COLORS[state.current]);
     } else if (m.t === 'ping') {
       if (state.gameId === m.gameId && state.seq > m.seq) broadcastState([]);
     }
+  }
+
+  // Effekt der Punktewahl bei den anderen: Zahl in der Zelle + Burst + Ton
+  let pickPlayed = false;
+  function showPick(m) {
+    if (m.gameId !== state.gameId || state.phase !== 'game') return;
+    const cell = document.querySelector(`[data-cell="${state.current}:${m.cat}"]`);
+    if (cell) {
+      cell.innerHTML = `<span class="peek picked">${m.pts}</span>`;
+      const b = document.createElement('div');
+      b.className = 'burst';
+      cell.appendChild(b);
+      setTimeout(() => b.remove(), 600);
+    }
+    if (m.cat === 'yatzy' && m.pts > 0) Sfx.yatzy(); else Sfx.score(m.pts);
+    pickPlayed = true;
   }
 
   function applyRemote(m) {
@@ -254,11 +275,14 @@
     // Töne für Züge der anderen
     if (s.current === prev.current && s.rollsLeft < prev.rollsLeft) Sfx.roll();
     else if (s.current !== prev.current || (s.phase === 'over' && prev.phase !== 'over')) {
-      const who = prev.players[prev.current];
-      const after = s.players[prev.current];
-      const key = Object.keys(after.scores).find((k) => who.scores[k] === undefined);
-      const pts = key ? after.scores[key] : 0;
-      if (key === 'yatzy' && pts > 0) Sfx.yatzy(); else Sfx.score(pts);
+      if (!pickPlayed) { // Ton nur, falls die Auswahl-Meldung nicht angekommen ist
+        const who = prev.players[prev.current];
+        const after = s.players[prev.current];
+        const key = Object.keys(after.scores).find((k) => who.scores[k] === undefined);
+        const pts = key ? after.scores[key] : 0;
+        if (key === 'yatzy' && pts > 0) Sfx.yatzy(); else Sfx.score(pts);
+      }
+      pickPlayed = false;
     }
     if (s.phase === 'over' && prev.phase !== 'over') setTimeout(() => Sfx.win(), 250);
     else if (!wasMine && isMyTurn() && s.current !== prev.current) setTimeout(() => Sfx.turn(), 350);
@@ -330,6 +354,7 @@
       dice: EMPTY_DICE(), held: NO_HOLD(), rollsLeft: 3,
       phase: done ? 'over' : 'game',
       seq: state.seq + 1,
+      records: done ? calcRecords(players) : undefined, // Rekord-Effekt sehen alle gleich
     });
     broadcastState([]);
     if (done) { maybeRecord(); setTimeout(() => Sfx.win(), 250); }
@@ -346,6 +371,7 @@
     bubble.parentElement.appendChild(burst);
     const pts = score(catId, state.dice);
     if (catId === 'yatzy' && pts > 0) Sfx.yatzy(); else Sfx.score(pts);
+    if (state.online) Net.send({ t: 'pick', gameId: state.gameId, cat: catId, pts }); // alle sehen den Effekt
     setTimeout(() => commit(catId), 480);
   }
 
@@ -510,7 +536,7 @@
             inner = s ? `<span class="peek">${s}</span>` : ''; // Mitspieler sehen nur Zahlen, keine Nullen
           }
         }
-        return `<div class="c ${isCur ? 'act' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
+        return `<div class="c ${isCur ? 'act' : ''} ${cv.soft ? 'soft' : ''} ${cv.got ? 'got' : ''}" data-cell="${i}:${id}" style="--pc:${COLORS[i]};--pt:${i === 2 ? '#3b2f00' : '#fff'}">${inner}</div>`;
       }).join('') + pad('<div class="c"></div>');
       const cls = ['row', free && s > 0 ? 'opt' : '', id === '_bonus' ? 'rule' : '', id === '_sum' || id === '_total' ? 'top3' : '', id === 'sixes' || id === 'yatzy' ? 'nob' : '', id === '_sum' || id === '_total' ? 'strong' : ''].join(' ');
       return `<div class="${cls}" style="--n:${cols}"><div class="lab">${label(id)}</div>${cells}</div>`;
@@ -617,7 +643,7 @@
       <div class="others">${rest.map((r) => `<div class="orow">${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
     document.body.appendChild(el);
-    const recs = newRecords();
+    const recs = state.records && state.records.length ? state.records : newRecords();
     if (recs.length && state.recShown !== state.gameId) { state.recShown = state.gameId; save(); showRecord(recs); }
     el.querySelector('#again').onclick = () => {
       el.remove();
@@ -628,18 +654,22 @@
   }
 
   // Erinnerung, wenn der aktive Spieler 20 Sekunden nichts tut (online nur auf dem Gerät, das dran ist)
+  function showTurnToast(text, color) {
+    document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
+    const t = document.createElement('div');
+    t.className = 'turn-toast';
+    t.style.setProperty('--pc', color);
+    t.textContent = text;
+    t.onanimationend = () => t.remove();
+    document.body.appendChild(t);
+  }
   let idleTimer = null;
   function armIdle() {
     clearTimeout(idleTimer);
     if (state.phase !== 'game' || !isMyTurn()) return;
     idleTimer = setTimeout(() => {
-      document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
-      const t = document.createElement('div');
-      t.className = 'turn-toast';
-      t.style.setProperty('--pc', COLORS[state.current]);
-      t.textContent = `${state.players[state.current].name} ist dran`;
-      t.onanimationend = () => t.remove();
-      document.body.appendChild(t);
+      showTurnToast(`${state.players[state.current].name} ist dran`, COLORS[state.current]);
+      if (state.online) Net.send({ t: 'nudge', gameId: state.gameId }); // alle anderen sehen es auch
       armIdle(); // alle 20 Sekunden wiederholen, bis der Spieler reagiert
     }, 20000);
   }

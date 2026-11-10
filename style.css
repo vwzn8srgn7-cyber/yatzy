@@ -133,12 +133,12 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 }
 .round.big { width: 84px; height: 84px; background: linear-gradient(#d9f76a, var(--lime-2)); color: #2d4a07; border: 2px solid #e8fba0; }
 .round.big:disabled { filter: grayscale(.8) brightness(.9); opacity: .7; }
-.round.big.pulse { animation: pulse 1.2s infinite; }
+.round.big.pulse::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--lime); animation: ring 1.4s ease-out infinite; pointer-events: none; }
 .round .badge {
   position: absolute; top: -4px; right: -4px; min-width: 24px; height: 24px; border-radius: 12px; padding: 0 5px;
   background: #e0485a; color: #fff; font-size: 14px; font-weight: 800; display: grid; place-items: center; border: 2px solid #fff;
 }
-@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(200,240,74,.7), 0 3px 6px rgba(0,0,0,.3); } 50% { box-shadow: 0 0 0 14px rgba(200,240,74,0), 0 3px 6px rgba(0,0,0,.3); } }
+@keyframes ring { from { transform: scale(1); opacity: .8; } to { transform: scale(1.45); opacity: 0; } }
 .round svg { width: 60%; height: 60%; }
 
 /* ---------- Gewinner ---------- */
@@ -185,8 +185,9 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 }
 .hb.on i { opacity: 1; transform: scale(1.2); box-shadow: 0 0 0 3px rgba(255,255,255,.45), 0 3px 6px rgba(0,0,0,.3); animation: bob 1s ease-in-out infinite; }
 @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
-.pl.cur .avatar { animation: breathe 1.4s ease-in-out infinite; }
-@keyframes breathe { 0%, 100% { box-shadow: 0 0 0 3px rgba(255,255,255,.3), 0 2px 4px rgba(0,0,0,.3); } 50% { box-shadow: 0 0 0 7px rgba(255,255,255,.12), 0 2px 4px rgba(0,0,0,.3); } }
+.avatar { position: relative; }
+.pl.cur .avatar::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); animation: ring 1.8s ease-out infinite; pointer-events: none; }
+
 
 /* Hinweis „… ist dran“ */
 .turn-toast {
@@ -307,3 +308,6 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .logo-die { width: 54px; height: 54px; }
 .wm span { font-size: min(50px, 11.2vw); }
 .menu-btn svg { width: 60%; height: 60%; }
+
+.peek.picked { font-weight: 800; font-size: clamp(14px, 4.4vw, 18px); }
+@media (prefers-reduced-motion: reduce) { .round.big.pulse::before, .pl.cur .avatar::after, .hb.on i { animation: none; } }
