@@ -11,7 +11,7 @@
     <circle cx="176" cy="170" r="31" fill="#2e8bd0"/>
     <circle cx="336" cy="170" r="31" fill="#e0485a"/>
     <circle cx="256" cy="250" r="31" fill="#1c1917"/>
-    <circle cx="176" cy="330" r="31" fill="#f2c14e"/>
-    <circle cx="336" cy="330" r="31" fill="#4caf50"/>
+    <circle cx="176" cy="330" r="31" fill="#4caf50"/>
+    <circle cx="336" cy="330" r="31" fill="#f2c14e"/>
   </g>
 </svg>

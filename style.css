@@ -6,7 +6,7 @@
   --line: #d9dcd9;
   --lime: #c8f04a;
   --lime-2: #9edb2a;
-  --pc1: #2e8bd0; --pc2: #e0485a; --pc3: #f2c14e; --pc4: #4caf50;
+  --pc1: #2e8bd0; --pc2: #e0485a; --pc3: #4caf50; --pc4: #f2c14e;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }

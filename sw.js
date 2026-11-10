@@ -1,5 +1,5 @@
-const CACHE = 'yatzy-v30';
-const FILES = ['./', 'index.html', 'style.css?v=30', 'scoring.js?v=30', 'sfx.js?v=30', 'config.js?v=30', 'net.js?v=30', 'app.js?v=30', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'yatzy-v31';
+const FILES = ['./', 'index.html', 'style.css?v=31', 'scoring.js?v=31', 'sfx.js?v=31', 'config.js?v=31', 'net.js?v=31', 'app.js?v=31', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

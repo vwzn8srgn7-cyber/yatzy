@@ -10,7 +10,7 @@
   const app = document.getElementById('app');
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
   const DEFAULT_NAMES = ['Vreni', 'Peter', 'Marco', 'Spieler 4'];
-  const COLORS = ['#2e8bd0', '#e0485a', '#f2c14e', '#4caf50'];
+  const COLORS = ['#2e8bd0', '#e0485a', '#4caf50', '#f2c14e']; // Blau, Rot, Grün, Gelb
   const ROW_ORDER = ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes', '_sum', '_bonus',
     'pair', 'twoPairs', 'three', 'four', 'small', 'large', 'full', 'chance', 'yatzy', '_total'];
   const LABELS = { _sum: `Summe (${BONUS_THRESHOLD})`, _bonus: 'Bonus', _total: 'Gesamt', pair: '1 Paar', twoPairs: '2 Paare', three: '3 gleiche', four: '4 gleiche', small: 'Kleine Strasse', large: 'Grosse Strasse', yatzy: 'YATZY' };
@@ -388,12 +388,12 @@
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
   }
-  const LOGO_COLORS = ['#2e8bd0', '#e0485a', '#f2c14e', '#4caf50', '#2e8bd0'];
+  const LOGO_COLORS = ['#2e8bd0', '#e0485a', '#4caf50', '#f2c14e', '#2e8bd0'];
   const LOGO_TILT = [-6, 4, -3, 5, -4];
   function logoHTML() {
     const die = `<svg class="logo-die" viewBox="0 0 64 64" aria-hidden="true"><g transform="rotate(-12 32 32)">
       <rect x="7" y="11" width="50" height="50" rx="13" fill="#0e4a29" opacity=".3"/><rect x="7" y="8" width="50" height="50" rx="13" fill="#b9c8b2"/><rect x="7" y="5" width="50" height="50" rx="13" fill="#fff"/>
-      <circle cx="21" cy="19" r="5.2" fill="#2e8bd0"/><circle cx="43" cy="19" r="5.2" fill="#e0485a"/><circle cx="32" cy="30" r="5.2" fill="#1c1917"/><circle cx="21" cy="41" r="5.2" fill="#f2c14e"/><circle cx="43" cy="41" r="5.2" fill="#4caf50"/></g></svg>`;
+      <circle cx="21" cy="19" r="5.2" fill="#2e8bd0"/><circle cx="43" cy="19" r="5.2" fill="#e0485a"/><circle cx="32" cy="30" r="5.2" fill="#1c1917"/><circle cx="21" cy="41" r="5.2" fill="#4caf50"/><circle cx="43" cy="41" r="5.2" fill="#f2c14e"/></g></svg>`;
     const word = [...'YATZY'].map((c, i) => `<span style="--lc:${LOGO_COLORS[i]};--rot:${LOGO_TILT[i]}deg">${c}</span>`).join('');
     return `<div class="logo" role="img" aria-label="Yatzy">${die}<div class="wm">${word}</div></div>`;
   }
