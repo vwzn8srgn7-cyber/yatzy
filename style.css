@@ -10,14 +10,17 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
+html { background: var(--green-3); }
+/* Hintergrund als feste Fläche über den ganzen Bildschirm (auch unter Statusleiste und unten), damit nie ein Streifen entsteht */
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 90% at 30% 10%, var(--green-1), var(--green-2) 60%, var(--green-3)); }
 body {
-  background: radial-gradient(120% 90% at 30% 10%, var(--green-1), var(--green-2) 60%, var(--green-3));
   color: var(--ink);
   font: 16px/1.2 "Trebuchet MS", "Avenir Next", -apple-system, system-ui, sans-serif;
   overscroll-behavior: none; user-select: none; -webkit-user-select: none;
   overflow: hidden;
 }
-#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; box-sizing: border-box; padding-top: env(safe-area-inset-top); }
+#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; box-sizing: border-box; padding-top: calc(env(safe-area-inset-top) + var(--top-extra, 0px)); }
 button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 /* ---------- Setup ---------- */
@@ -428,3 +431,6 @@ input.hz { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; o
 .hz-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
 .hz-layer input.hz { position: fixed; inset: auto; width: 0; height: 0; }
 html.nohz input.hz { display: none; }
+
+/* iOS legt unter der Statusleiste einen Weichzeichner-Schleier über die obersten ~30 pt; als App etwas Abstand lassen */
+@media (display-mode: standalone) { :root { --top-extra: 16px; } }
