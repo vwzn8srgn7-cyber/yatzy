@@ -718,7 +718,25 @@
       if (pendingRoll) { const r = pendingRoll; pendingRoll = null; Dice3D.roll(r.values, r.mask); }
       else Dice3D.setDice(state.dice, state.held);
     }
-    app.querySelectorAll('[data-cat]').forEach((b) => b.onclick = () => choose(b.dataset.cat, b));
+    // Punkte-Blase: gedrückt halten markiert sie, Finger wegwischen bricht ab, erst Loslassen auf der Blase wählt sie
+    app.querySelectorAll('[data-cat]').forEach((b) => {
+      b.style.touchAction = 'none';
+      const inside = (e) => { const r = b.getBoundingClientRect(), m = 6; return e.clientX >= r.left - m && e.clientX <= r.right + m && e.clientY >= r.top - m && e.clientY <= r.bottom + m; };
+      b.onpointerdown = (e) => {
+        if (busy || !isMyTurn() || e.button > 0) return;
+        b.classList.add('arm');
+        const move = (ev) => b.classList.toggle('arm', inside(ev));
+        const end = (ev) => {
+          window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel);
+          const ok = ev.type === 'pointerup' && inside(ev);
+          b.classList.remove('arm');
+          if (ok) choose(b.dataset.cat, b);
+        };
+        const up = end, cancel = end;
+        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel);
+      };
+      b.onclick = (e) => { if (e.detail === 0) choose(b.dataset.cat, b); };   // Tastatur und Hilfsfunktionen
+    });
     document.getElementById('roll').onclick = roll;
     document.getElementById('menu').onclick = openMenu;
     const chatBtn = document.getElementById('chat'); if (chatBtn) chatBtn.onclick = openChat;
