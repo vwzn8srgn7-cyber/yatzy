@@ -366,8 +366,26 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
   30% { transform: translate(-50%,-50%) scale(1) rotate(-4deg); } 80% { opacity: 1; } 100% { transform: translate(-50%,-62%) scale(1.05) rotate(-4deg); opacity: 0; } }
 
 /* mittig */
-.my-turn { position: fixed; left: 50%; top: 38%; margin: 0; z-index: 55; pointer-events: none; padding: 9px 18px; border-radius: 999px; background: #fff; color: #4c9a1f;
-  font: 800 21px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+/* Einblendung mitten auf dem Bildschirm */
+.my-turn { position: fixed; left: 50%; top: 45%; margin: 0; z-index: 55; pointer-events: none; padding: 16px 30px; border-radius: 999px; background: #fff; color: #4c9a1f;
+  font: 800 34px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
   animation: myTurn 1.7s ease-out forwards; }
 @keyframes myTurn { 0% { opacity: 0; transform: translate(-50%,-40%) scale(.8) rotate(-3deg); } 15% { opacity: 1; transform: translate(-50%,-50%) scale(1.1) rotate(-3deg); }
   25% { transform: translate(-50%,-50%) scale(1) rotate(-3deg); } 80% { opacity: 1; transform: translate(-50%,-54%) rotate(-3deg); } 100% { opacity: 0; transform: translate(-50%,-70%) rotate(-3deg); } }
+
+/* Rekord-Hinweis schon während des Spiels */
+.live-rec { position: fixed; left: 50%; top: 50%; z-index: 56; pointer-events: none; display: flex; align-items: center; gap: 10px; padding: 10px 18px 10px 14px;
+  border-radius: 16px; background: linear-gradient(#ffe27a, #f4bf2e); color: #5a3a00; box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.6);
+  animation: liveRec 2.6s ease-out forwards; }
+.live-rec span { font-size: 30px; line-height: 1; }
+.live-rec b { display: block; font-size: 18px; font-weight: 800; }
+.live-rec small { display: block; font-size: 14px; font-weight: 600; opacity: .85; }
+@keyframes liveRec { 0% { opacity: 0; transform: translate(-50%, -35%) scale(.8); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  22% { transform: translate(-50%, -50%) scale(1); } 85% { opacity: 1; transform: translate(-50%, -50%); } 100% { opacity: 0; transform: translate(-50%, -62%); } }
+
+/* Aktiver Spieler: grösserer Avatar, deutlicheres Pulsieren und Leuchten */
+.pl.cur .avatar { transform: scale(1.28); margin-right: 6px; animation: curPulse 1.3s ease-in-out infinite;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.55), 0 0 14px 3px rgba(255,255,255,.55), 0 2px 4px rgba(0,0,0,.3); }
+.pl.cur .avatar::after { inset: -5px; border-width: 4px; border-color: rgba(255,255,255,.85); animation: ring 1.3s ease-out infinite; }
+@keyframes curPulse { 0%, 100% { transform: scale(1.22); } 50% { transform: scale(1.34); } }
+.my-turn { max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }

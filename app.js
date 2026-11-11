@@ -125,7 +125,32 @@
       .filter((r) => prev[r.name.toLowerCase()] !== undefined && r.score > prev[r.name.toLowerCase()]);
   }
   const newRecords = () => calcRecords(state.players);
-  function clearFx() { document.querySelectorAll('.rec-fx,.turn-toast').forEach((e) => e.remove()); }
+  function clearFx() { document.querySelectorAll('.rec-fx,.turn-toast,.my-turn').forEach((e) => e.remove()); }
+  // Live-Hinweis: sobald jemand schon während des Spiels seinen bisherigen Bestwert übertrifft (einmal pro Spiel und Person)
+  let liveRecGame = null, liveRecDone = {};
+  function checkLiveRecord() {
+    if (state.phase !== 'game' || !state.prevBest || state.players.length < 2) return;
+    const first = liveRecGame !== state.gameId;
+    if (first) { liveRecGame = state.gameId; liveRecDone = {}; }
+    const hits = [];
+    state.players.forEach((p) => {
+      const k = p.name.toLowerCase(), best = state.prevBest[k];
+      if (best === undefined || liveRecDone[k]) return;
+      const sc = total(p.scores);
+      if (sc > best) { liveRecDone[k] = true; if (!first) hits.push({ name: p.name, score: sc }); }   // beim Wiedereinstieg in ein laufendes Spiel nicht erneut melden
+    });
+    if (hits.length) showLiveRecord(hits[0]);
+  }
+  function showLiveRecord(r) {
+    document.querySelectorAll('.live-rec').forEach((e) => e.remove());
+    const el = document.createElement('div');
+    el.className = 'live-rec';
+    el.innerHTML = `<span>🏆</span><div><b>Rekord geknackt!</b><small>${h(r.name)} · ${r.score} Punkte</small></div>`;
+    document.body.appendChild(el);
+    Sfx.rec();
+    setTimeout(() => el.remove(), 2600);
+  }
+
   function showRecord(recs) {
     const el = document.createElement('div');
     el.className = 'rec-fx';
@@ -237,7 +262,7 @@
     } else if (m.t === 'pick') {
       showPick(m);
     } else if (m.t === 'nudge') {
-      if (m.gameId === state.gameId && state.phase === 'game' && !isMyTurn()) showTurnToast(`${state.players[state.current].name} ist dran`, COLORS[state.current]);
+      if (m.gameId === state.gameId && state.phase === 'game' && !isMyTurn()) showTurnToast(`${state.players[state.current].name} ist dran`);
     } else if (m.t === 'ping') {
       if (state.gameId === m.gameId && state.seq > m.seq) broadcastState([]);
     }
@@ -569,6 +594,7 @@
   const offline = (p) => state.online && onlineIds.size > 0 && p.id !== myId && !onlineIds.has(p.id);
 
   function renderGame() {
+    checkLiveRecord();
     const n = state.players.length;
     const cols = Math.max(n, 3); // 1–2 Spieler: leere Spalten, damit das Blatt wie bei 3 Spielern aussieht
     const pad = (cell) => cell.repeat(cols - n);
@@ -730,32 +756,28 @@
   }
 
   // Kurzer „Du bist dran!“-Schriftzug über den Würfeln (nur online, nur bei dem, der dran ist)
-  function myTurnText() {
-    if (!state.online || state.phase !== 'game') return;
+  function bigBanner(text, ms = 1700) {
     document.querySelectorAll('.my-turn').forEach((t) => t.remove());
     const t = document.createElement('div');
     t.className = 'my-turn';
-    t.textContent = 'Du bist dran!';
+    t.textContent = text;
+    t.style.animationDuration = ms + 'ms';
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 1700);
+    setTimeout(() => t.remove(), ms + 50);
+  }
+  function myTurnText() {
+    if (!state.online || state.phase !== 'game') return;
+    bigBanner('Du bist dran!');
   }
 
   // Erinnerung, wenn der aktive Spieler 20 Sekunden nichts tut (online nur auf dem Gerät, das dran ist)
-  function showTurnToast(text, color) {
-    document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
-    const t = document.createElement('div');
-    t.className = 'turn-toast';
-    t.style.setProperty('--pc', color);
-    t.textContent = text;
-    t.onanimationend = () => t.remove();
-    document.body.appendChild(t);
-  }
+  function showTurnToast(text) { bigBanner(text, 2600); }
   let idleTimer = null;
   function armIdle() {
     clearTimeout(idleTimer);
     if (state.phase !== 'game' || !isMyTurn()) return;
     idleTimer = setTimeout(() => {
-      showTurnToast(`${state.players[state.current].name} ist dran`, COLORS[state.current]);
+      showTurnToast(`${state.players[state.current].name} ist dran`);
       if (state.online) Net.send({ t: 'nudge', gameId: state.gameId }); // alle anderen sehen es auch
       armIdle(); // alle 20 Sekunden wiederholen, bis der Spieler reagiert
     }, 20000);
@@ -767,7 +789,7 @@
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
-    if (state.phase !== 'game') document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
+    if (state.phase !== 'game') document.querySelectorAll('.turn-toast,.my-turn').forEach((t) => t.remove());
     updateOfflinePop();
   }
 

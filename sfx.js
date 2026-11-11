@@ -101,6 +101,7 @@
     rollHaptic() { buzz([15, 40, 15]); },
     turn() { tone(784, 0, 0.12, { vol: 0.14 }); tone(1047, 0.1, 0.22, { vol: 0.14 }); buzz(20); },
     hold() { tone(880, 0, 0.05, { type: 'triangle', vol: 0.085 }); buzz(8); },
+    rec() { [784, 988, 1319].forEach((f, i) => tone(f, i * 0.08, 0.22, { type: 'triangle', vol: 0.13 })); buzz([20, 30, 20]); },
     chat() { tone(880, 0, 0.07, { vol: 0.09 }); tone(1175, 0.06, 0.1, { vol: 0.09 }); },
     score(points) {
       if (points > 0) { tone(660, 0, 0.12); tone(990, 0.08, 0.18); }
