@@ -1,3 +1,4 @@
+@font-face { font-family: 'Nunito'; font-style: normal; font-weight: 200 1000; font-display: swap; src: url(fonts/nunito-latin.woff2) format('woff2'); }
 :root {
   --green-1: #4cb87e;
   --green-2: #2f9a5c;
@@ -16,7 +17,7 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-even
   background: radial-gradient(120% 90% at 30% 10%, var(--green-1), var(--green-2) 60%, var(--green-3)); }
 body {
   color: var(--ink);
-  font: 16px/1.2 "Trebuchet MS", "Avenir Next", -apple-system, system-ui, sans-serif;
+  font: 600 16px/1.2 "Nunito", ui-rounded, "SF Pro Rounded", "Trebuchet MS", system-ui, sans-serif;
   overscroll-behavior: none; user-select: none; -webkit-user-select: none;
   overflow: hidden;
 }
@@ -273,7 +274,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .logo-die { width: 62px; height: 62px; flex: none; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
 .wm { display: flex; }
 .wm span {
-  font: 900 50px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Avenir Next", system-ui, sans-serif;
+  font: 900 50px/1 "Nunito", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Avenir Next", system-ui, sans-serif;
   color: #fff; display: inline-block; letter-spacing: -1px;
   transform: rotate(var(--rot)) translateY(calc(var(--rot) * -.25));
   text-shadow: 0 3px 0 var(--lc), 0 6px 0 rgba(0,0,0,.18), 0 10px 14px rgba(0,0,0,.2);
@@ -362,7 +363,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .chat-pop .ce button:active { background: #f3f3f3; }
 
 .yatzy-text { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -50%); white-space: nowrap;
-  font: 900 40px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; color: #fff; letter-spacing: 1px;
+  font: 900 40px/1 "Nunito", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; color: #fff; letter-spacing: 1px;
   -webkit-text-stroke: 2px #e0485a; paint-order: stroke fill; text-shadow: 0 3px 0 #b02a3c, 0 6px 14px rgba(0,0,0,.4);
   animation: yatzyPop 1.25s ease-out forwards; }
 @keyframes yatzyPop { 0% { transform: translate(-50%,-50%) scale(.3) rotate(-8deg); opacity: 0; } 15% { transform: translate(-50%,-50%) scale(1.25) rotate(-4deg); opacity: 1; }
@@ -371,7 +372,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 /* mittig */
 /* Einblendung mitten auf dem Bildschirm */
 .my-turn { position: fixed; left: 50%; top: 45%; margin: 0; z-index: 55; pointer-events: none; padding: 16px 30px; border-radius: 999px; background: #fff; color: #4c9a1f;
-  font: 800 34px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  font: 800 34px/1 "Nunito", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
   animation: myTurn 1.7s ease-out forwards; }
 @keyframes myTurn { 0% { opacity: 0; transform: translate(-50%,-40%) scale(.8) rotate(-3deg); } 15% { opacity: 1; transform: translate(-50%,-50%) scale(1.1) rotate(-3deg); }
   25% { transform: translate(-50%,-50%) scale(1) rotate(-3deg); } 80% { opacity: 1; transform: translate(-50%,-54%) rotate(-3deg); } 100% { opacity: 0; transform: translate(-50%,-70%) rotate(-3deg); } }
@@ -435,3 +436,26 @@ html.nohz input.hz { display: none; }
 
 /* iOS legt unter der Statusleiste einen Schleier über die obersten ~30 pt; als App etwas Abstand lassen */
 @media (display-mode: standalone) { :root { --top-extra: 7px; } }
+
+/* Medaillen statt Zahlen */
+.brow .rk, .st-rk { background: none !important; font-size: 27px; line-height: 1; width: 30px; }
+.st-rk { font-size: 30px; }
+/* Gewinner-Bildschirm: Animationen */
+.win .crown { animation: crownDrop .8s cubic-bezier(.3,1.5,.5,1) .15s both; }
+.win .big-avatar { animation: avatarIn .7s cubic-bezier(.3,1.5,.5,1) both, avatarFloat 2.6s ease-in-out .8s infinite; }
+.win .banner { animation: bannerIn .5s .45s cubic-bezier(.2,1.3,.4,1) both; }
+.win .winner-name { font-size: 46px; animation: nameIn .5s .65s ease-out both; text-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.win .pts { animation: nameIn .5s .8s ease-out both; }
+.win .orow { animation: rowIn .45s ease-out both; } .win .orow:nth-child(1) { animation-delay: 1s; } .win .orow:nth-child(2) { animation-delay: 1.15s; } .win .orow:nth-child(3) { animation-delay: 1.3s; }
+.win .orow .medal { width: 34px; text-align: center; font-size: 28px; line-height: 1; }
+.win .again { animation: rowIn .45s 1.5s ease-out both; }
+@keyframes crownDrop { from { transform: translateY(-90px) rotate(-14deg) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes avatarIn { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes avatarFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes bannerIn { from { transform: scaleX(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes nameIn { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rowIn { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.win .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.win .confetti i { position: absolute; top: -20px; width: 9px; height: 14px; border-radius: 2px; opacity: .9; animation: confFall linear infinite; }
+@keyframes confFall { 0% { transform: translateY(-20px) rotate(0); } 100% { transform: translateY(105vh) rotate(720deg); } }
+@media (prefers-reduced-motion: reduce) { .win .confetti { display: none; } .win .big-avatar { animation: none; } }

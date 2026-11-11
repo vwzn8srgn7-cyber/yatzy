@@ -171,7 +171,7 @@
   function boardHTML() {
     const top = boardRows();
     const rows = top.length
-      ? top.map((s, i) => `<div class="brow" data-stat="${h(s.name)}" role="button" tabindex="0"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
+      ? top.map((s, i) => `<div class="brow" data-stat="${h(s.name)}" role="button" tabindex="0"><span class="rk">${['🥇', '🥈', '🥉'][i] || i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
       : `<div class="bempty">${boardData ? 'Noch keine Spiele gespielt' : 'Lade …'}</div>`;
     return `<div class="board"><div class="bt"><span>Rangliste</span><span class="bcap">(Siege in Prozent)</span></div>${rows}${top.length ? '<div class="bhint">Namen antippen für die Statistik</div>' : ''}</div>`;
   }
@@ -196,7 +196,7 @@
     const el = document.createElement('div');
     el.className = 'pop-overlay';
     el.innerHTML = `<div class="pop stat-pop">
-      <div class="st-head"><span class="st-rk">${rank || ''}</span><h2>${h(s.name)}</h2><span class="st-big"><b>${pct(w)} %</b> Siegquote</span></div>
+      <div class="st-head"><span class="st-rk">${['🥇', '🥈', '🥉'][rank - 1] || rank || ''}</span><h2>${h(s.name)}</h2><span class="st-big"><b>${pct(w)} %</b> Siegquote</span></div>
       ${d !== null ? `<div class="st-bar">${seg(w, 'w')}${seg(d, 'd')}${seg(l, 'l')}</div>
       <div class="st-leg"><span><i class="w"></i>${w} Siege</span><span><i class="d"></i>${d} Unentschieden</span><span><i class="l"></i>${l} Niederlagen</span></div>` : ''}
       <div class="st-grid">
@@ -789,16 +789,20 @@
       .map(([x, y, r]) => `<span class="leaf" style="left:${x}%;top:${y}%;transform:rotate(${r}deg)"></span>`).join('');
     const el = document.createElement('div');
     el.className = 'win';
-    el.innerHTML = `${leaves}
+    const conf = Array.from({ length: 28 }, (_, i) => `<i style="left:${Math.round(Math.random() * 100)}%;background:${COLORS[i % 4]};animation-duration:${(3 + Math.random() * 3).toFixed(1)}s;animation-delay:-${(Math.random() * 5).toFixed(1)}s"></i>`).join('');
+    el.innerHTML = `<div class="confetti">${ranked.length > 1 ? conf : ''}</div>${leaves}
       <button class="round menu-btn" id="wmenu" aria-label="Zur Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h4.5v-5.5h3V20H18v-9.5"/></svg></button>
       ${crownSVG()}
       <div class="big-avatar" style="background:${COLORS[w.i]}">${h(initial(w.p))}</div>
       <div class="banner">${ranked.length > 1 ? 'GEWINNER' : 'FERTIG'}</div>
       <div class="winner-name">${h(w.p.name)}</div>
-      <div class="pts">${w.t} PUNKTE</div>
-      <div class="others">${rest.map((r) => `<div class="orow">${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
+      <div class="pts"><span id="wcount">0</span> PUNKTE</div>
+      <div class="others">${rest.map((r, k) => `<div class="orow"><span class="medal">${['🥈', '🥉'][k] || (k + 2)}</span>${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
     document.body.appendChild(el);
+    // Punkte des Gewinners zählen hoch
+    const wc = el.querySelector('#wcount'); const t0 = performance.now();
+    (function tick(now) { const p = Math.min(1, ((now || performance.now()) - t0 - 800) / 1100); wc.textContent = Math.round(w.t * Math.max(0, 1 - Math.pow(1 - p, 3))); if (p < 1 && document.body.contains(el)) requestAnimationFrame(tick); else wc.textContent = w.t; })();
     const recs = state.records && state.records.length ? state.records : newRecords();
     if (recs.length && state.recShown !== state.gameId) { state.recShown = state.gameId; save(); showRecord(recs); }
     el.querySelector('#again').onclick = () => {

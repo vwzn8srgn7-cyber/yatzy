@@ -54,7 +54,7 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
 
   // ---------- Würfel ----------
   const PIPS = { 1: [[.5, .5]], 2: [[.27, .27], [.73, .73]], 3: [[.27, .27], [.5, .5], [.73, .73]], 4: [[.27, .27], [.73, .27], [.27, .73], [.73, .73]],
-    5: [[.27, .27], [.73, .27], [.5, .5], [.27, .73], [.73, .73]], 6: [[.27, .25], [.73, .25], [.27, .5], [.73, .5], [.27, .75], [.73, .75]] };
+    5: [[.27, .27], [.73, .27], [.5, .5], [.27, .73], [.73, .73]], 6: [[.27, .22], [.73, .22], [.27, .5], [.73, .5], [.27, .78], [.73, .78]] };
   function faceTexture(n, held) {
     const c = document.createElement('canvas'); c.width = c.height = 512;
     const g = c.getContext('2d');
@@ -63,11 +63,11 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
     if (held) { bg.addColorStop(0, '#fffbb8'); bg.addColorStop(1, '#ecdf5c'); } else { bg.addColorStop(0, '#fffefa'); bg.addColorStop(1, '#e4e1d3'); }
     g.fillStyle = bg; g.fillRect(0, 0, 256, 256);
     PIPS[n].forEach(([x, y]) => {
-      const px = x * 256, py = y * 256, r = 27;
+      const px = x * 256, py = y * 256, r = 29;
       const dent = g.createRadialGradient(px - 7, py - 7, 2, px, py, r);
-      dent.addColorStop(0, '#4a4a4a'); dent.addColorStop(1, '#0b0b0b');
+      dent.addColorStop(0, '#2c2c2c'); dent.addColorStop(1, '#000');
       g.fillStyle = dent; g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 3; g.beginPath(); g.arc(px, py, r + 2, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 3.5; g.beginPath(); g.arc(px, py, r + 2, 0, Math.PI * 2); g.stroke();
     });
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -79,7 +79,7 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
     { n: new THREE.Vector3(0, 1, 0), v: 2 }, { n: new THREE.Vector3(0, -1, 0), v: 5 },
     { n: new THREE.Vector3(0, 0, 1), v: 1 }, { n: new THREE.Vector3(0, 0, -1), v: 6 },
   ];
-  const mk = (held) => FACES.map((f) => new THREE.MeshStandardMaterial({ map: faceTexture(f.v, held), roughness: 0.42, metalness: 0 }));
+  const mk = (held) => FACES.map((f) => new THREE.MeshPhysicalMaterial({ map: faceTexture(f.v, held), roughness: 0.4, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.22 }));
   const MAT_NORMAL = mk(false), MAT_HELD = mk(true);
   const geo = new RoundedBoxGeometry(1, 1, 1, 5, 0.13);
 
