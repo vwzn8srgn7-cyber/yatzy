@@ -1,5 +1,5 @@
-const CACHE = 'yatzy-v53';
-const FILES = ['./', 'index.html', 'style.css?v=53', 'scoring.js?v=53', 'sfx.js?v=53', 'config.js?v=53', 'net.js?v=53', 'dice3d.js?v=53', 'vendor/three.module.min.js?v=53', 'vendor/RoundedBoxGeometry.js', 'app.js?v=53', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'yatzy-v54';
+const FILES = ['./', 'index.html', 'style.css?v=54', 'scoring.js?v=54', 'sfx.js?v=54', 'config.js?v=54', 'net.js?v=54', 'dice3d.js?v=54', 'vendor/three.module.min.js?v=54', 'vendor/RoundedBoxGeometry.js', 'app.js?v=54', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
