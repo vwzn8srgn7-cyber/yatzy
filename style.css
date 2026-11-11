@@ -433,4 +433,4 @@ input.hz { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; o
 html.nohz input.hz { display: none; }
 
 /* iOS legt unter der Statusleiste einen Weichzeichner-Schleier über die obersten ~30 pt; als App etwas Abstand lassen */
-@media (display-mode: standalone) { :root { --top-extra: 0px; } }
+@media (display-mode: standalone) { :root { --top-extra: 7px; } }
