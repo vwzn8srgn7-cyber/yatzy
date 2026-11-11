@@ -59,7 +59,7 @@
   function buzz(pattern, force) {
     if (!on || (!force && quiet())) return;
     try {
-      if (navigator.vibrate) { navigator.vibrate(pattern); return; }
+      if (navigator.vibrate) { if (!navigator.userActivation || navigator.userActivation.hasBeenActive) navigator.vibrate(pattern); return; }   // Android: erst nach der ersten Berührung erlaubt
       if (!sw) {
         sw = document.createElement('label');
         sw.setAttribute('aria-hidden', 'true');
@@ -75,10 +75,12 @@
     } catch { /* Haptik nicht verfügbar */ }
   }
 
+  document.documentElement.classList.toggle('nohz', !on);
   const Sfx = {
     isOn: () => on,
     setOn(v) {
       on = !!v;
+      document.documentElement.classList.toggle('nohz', !on);
       try { localStorage.setItem('yatzy-sound', on ? 'on' : 'off'); } catch { /* ignorieren */ }
       if (on) ctx();   // beim Einschalten das Audio-System frisch anstossen
     },
@@ -113,7 +115,7 @@
     // leises Tippgeräusch für jede Schaltfläche; noHaptic = Aufrufer löst die Vibration selbst aus
     tap(noHaptic) { tone(720, 0, 0.04, { type: 'triangle', vol: 0.07, force: true }); if (!noHaptic) buzz(8, true); },
     quiet,
-    chat() { tone(880, 0, 0.07, { vol: 0.09 }); tone(1175, 0.06, 0.1, { vol: 0.09 }); },
+    chat() { tone(880, 0, 0.07, { vol: 0.09 }); tone(1175, 0.06, 0.1, { vol: 0.09 }); buzz([20, 30, 20]); },
     score(points) {
       if (points > 0) { tone(660, 0, 0.12); tone(990, 0.08, 0.18); }
       else tone(220, 0, 0.22, { type: 'triangle', slideTo: 120, vol: 0.2 });

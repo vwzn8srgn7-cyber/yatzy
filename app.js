@@ -811,6 +811,52 @@
   }
 
   // Kurzer „Du bist dran!“-Schriftzug über den Würfeln (nur online, nur bei dem, der dran ist)
+  // ---------- Vibration auf dem iPhone ----------
+  // iOS vibriert nur, wenn der Finger selbst einen Schalter (input switch) berührt; Klicks aus dem Programm werden ignoriert.
+  // Darum liegt über jeder Taste ein durchsichtiger Schalter, und über jedem antippbaren Würfel ein eigener.
+  const HZ_SEL = 'button, [data-cat], [data-slot], [data-mode], [data-count], [data-stat], .lrow';
+  function makeSwitch() {
+    const i = document.createElement('input');
+    i.type = 'checkbox'; i.setAttribute('switch', ''); i.className = 'hz'; i.tabIndex = -1; i.setAttribute('aria-hidden', 'true');
+    return i;
+  }
+  let hzQueued = false;
+  function hapticize() {
+    hzQueued = false;
+    document.querySelectorAll(HZ_SEL).forEach((el) => {
+      if (el.querySelector(':scope > .hz') || el.closest('.hz-layer') || el.tagName === 'INPUT') {
+        const hz = el.querySelector(':scope > .hz'); if (hz) hz.disabled = !!el.disabled;
+        return;
+      }
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      const i = makeSwitch(); i.disabled = !!el.disabled;
+      el.appendChild(i);
+    });
+  }
+  new MutationObserver(() => { if (!hzQueued) { hzQueued = true; requestAnimationFrame(hapticize); } }).observe(document.body, { childList: true, subtree: true });
+
+  // Schalter über den Würfeln: nur aktiv, solange man Würfel halten darf
+  let hzLayer = null;
+  function syncDiceSwitches() {
+    if (!has3d() || state.phase !== 'game') { if (hzLayer) hzLayer.style.display = 'none'; return; }
+    if (!hzLayer) {
+      hzLayer = document.createElement('div'); hzLayer.className = 'hz-layer';
+      for (let i = 0; i < 5; i++) { const s = makeSwitch(); s.dataset.i = i; s.onclick = () => toggleHold(i); hzLayer.appendChild(s); }
+      document.body.appendChild(hzLayer);
+    }
+    hzLayer.style.display = '';
+    const allowed = state.rollsLeft > 0 && state.rollsLeft < 3 && !busy && isMyTurn() && !Dice3D.busy();
+    const rs = Dice3D.rects();
+    [...hzLayer.children].forEach((s, i) => {
+      const r = rs.find((q) => q.i === i);
+      if (!r || !allowed) { s.style.pointerEvents = 'none'; return; }
+      s.style.pointerEvents = 'auto';
+      s.style.left = Math.round(r.x - r.r) + 'px'; s.style.top = Math.round(r.y - r.r) + 'px';
+      s.style.width = Math.round(r.r * 2) + 'px'; s.style.height = Math.round(r.r * 2) + 'px';
+    });
+  }
+  setInterval(() => { if (window.Dice3D) syncDiceSwitches(); }, 200);
+
   function bigBanner(text, ms = 1700) {
     document.querySelectorAll('.my-turn').forEach((t) => t.remove());
     const t = document.createElement('div');

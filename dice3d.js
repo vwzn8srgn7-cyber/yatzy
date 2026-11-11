@@ -306,6 +306,17 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
   canvas.addEventListener('webglcontextrestored', () => requestRender());
   window.addEventListener('resize', fit);
 
-  window.Dice3D = { mount, setDice, roll, busy: () => mode === 'rolling', onTap: (fn) => { tapFn = fn; }, values: () => dice.map((d) => (d.mesh.visible ? d.value : 0)), heldFlags: () => dice.map((d) => d.held) };
+  // Bildschirmposition und Radius jedes sichtbaren Würfels (für die Vibrations-Schalter über den Würfeln)
+  function rects() {
+    const r = canvas.getBoundingClientRect();
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    return dice.filter((d) => d.mesh.visible).map((d) => {
+      const c = d.mesh.position.clone().project(camera);
+      const e = d.mesh.position.clone().addScaledVector(right, 0.6).project(camera);
+      return { i: d.i, x: r.left + ((c.x + 1) / 2) * r.width, y: r.top + ((1 - c.y) / 2) * r.height, r: Math.abs(((e.x - c.x) / 2) * r.width) };
+    });
+  }
+
+  window.Dice3D = { mount, setDice, roll, rects, busy: () => mode === 'rolling', onTap: (fn) => { tapFn = fn; }, values: () => dice.map((d) => (d.mesh.visible ? d.value : 0)), heldFlags: () => dice.map((d) => d.held) };
   window.dispatchEvent(new Event('dice3d-ready'));
 })();
