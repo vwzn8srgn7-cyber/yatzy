@@ -923,6 +923,22 @@
     if (!document.hidden && state.online) Net.send({ t: 'hello', id: myId });
   });
 
+  // iPhone als Home-Bildschirm-App: iOS meldet die Fensterhöhe manchmal zu klein (grüner Streifen unten, Inhalt abgeschnitten).
+  // Dort ist das Fenster immer so hoch wie der Bildschirm, also die Bildschirmhöhe verwenden.
+  function fitAppHeight() {
+    const el = document.getElementById('app');
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (!el) return;
+    if (!standalone || !screen.height) { el.style.bottom = ''; el.style.height = ''; return; }
+    const portrait = window.innerHeight >= window.innerWidth;
+    const h = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    el.style.bottom = 'auto';
+    el.style.height = Math.max(h, window.innerHeight) + 'px';
+  }
+  fitAppHeight();
+  ['resize', 'orientationchange', 'pageshow', 'focus'].forEach((ev) => window.addEventListener(ev, () => { fitAppHeight(); setTimeout(fitAppHeight, 300); }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { fitAppHeight(); setTimeout(fitAppHeight, 300); } });
+
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
