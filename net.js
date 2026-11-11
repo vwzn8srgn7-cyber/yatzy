@@ -89,16 +89,31 @@
   async function saveResult(gameId, rows) {
     const c = client(); if (!c) return false;
     const { error } = await c.from('yatzy_results').upsert(
-      rows.map((r, i) => ({ game_id: gameId, seat: i, name: r.name.slice(0, 12), score: r.score, won: r.won })),
+      rows.map((r, i) => ({ game_id: gameId, seat: i, name: r.name.slice(0, 12), score: r.score, won: r.won, yatzy: !!r.yatzy })),
       { onConflict: 'game_id,seat', ignoreDuplicates: true },
     );
     return !error;
   }
   async function fetchBoard() {
     const c = client(); if (!c) return null;
+    // erweiterte Statistik; fällt auf die einfache Rangliste zurück, falls die Ansicht fehlt
+    const st = await c.from('yatzy_stats').select('name,games,wins,draws,losses,avg,avg_win,avg_draw,avg_loss,best,yatzys,form_desc');
+    if (!st.error && st.data) {
+      return st.data.map((r) => ({
+        name: r.name, games: r.games, wins: r.wins, draws: r.draws, losses: r.losses, avg: r.avg,
+        avgWin: r.avg_win, avgDraw: r.avg_draw, avgLoss: r.avg_loss, best: r.best, yatzys: r.yatzys,
+        form: (r.form_desc || []).slice().reverse(),   // ältestes zuerst, neuestes rechts
+      }));
+    }
     const { data, error } = await c.from('yatzy_leaderboard').select('name,games,wins,best');
     return error ? null : data;
   }
+  // Direktvergleich: alle Gegner einer Person (gemeinsame Spiele)
+  async function fetchH2H(name) {
+    const c = client(); if (!c) return null;
+    const { data, error } = await c.from('yatzy_h2h').select('b_name,games,a_wins,b_wins,ties,a_avg,b_avg').ilike('a_name', name.replace(/[%_]/g, ''));
+    return error ? null : data;
+  }
 
-  root.Net = { join, leave, peek, unpeek, send, setReady, saveResult, fetchBoard, connected: () => !!(ch && tracked) };
+  root.Net = { join, leave, peek, unpeek, send, setReady, saveResult, fetchBoard, fetchH2H, connected: () => !!(ch && tracked) };
 })(window);

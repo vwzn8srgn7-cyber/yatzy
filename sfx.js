@@ -24,7 +24,14 @@
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { ctx(); wake(); }, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
 
-  function tone(freq, t0, dur, { type = 'sine', vol = 0.18, slideTo } = {}) {
+  // Im Hintergrund oder direkt nach der Rückkehr (aufgelaufene Meldungen) bleibt es still, damit keine alten Töne nachklingen.
+  // Eigene Berührungen (force) klingen immer.
+  let quietUntil = 0;
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) quietUntil = Date.now() + 900; });
+  const quiet = () => document.hidden || Date.now() < quietUntil;
+
+  function tone(freq, t0, dur, { type = 'sine', vol = 0.18, slideTo, force } = {}) {
+    if (!force && quiet()) return;
     const a = ctx(); if (!a) return;
     const t = a.currentTime + t0;
     const o = a.createOscillator(), g = a.createGain();
@@ -49,8 +56,8 @@
 
   // Haptik: Android/Chrome per Vibration API, iOS-Safari (17.4+) über den Schalter-Trick
   let sw = null;
-  function buzz(pattern) {
-    if (!on) return;
+  function buzz(pattern, force) {
+    if (!on || (!force && quiet())) return;
     try {
       if (navigator.vibrate) { navigator.vibrate(pattern); return; }
       if (!sw) {
@@ -79,6 +86,7 @@
     buzz,
     // Würfel-Aufprall (3D-Würfel): dumpfer Schlag plus kurzes Klacken; delay in Sekunden ab jetzt, imp = Stärke 0..1 (leiser als vorher)
     knock(delay, imp) {
+      if (quiet()) return;
       const a = ctx(); if (!a) return;
       const t0 = a.currentTime + Math.max(0, delay);
       const o = a.createOscillator(), g = a.createGain();
@@ -103,7 +111,8 @@
     hold() { tone(880, 0, 0.05, { type: 'triangle', vol: 0.085 }); buzz(8); },
     rec() { [784, 988, 1319].forEach((f, i) => tone(f, i * 0.08, 0.22, { type: 'triangle', vol: 0.13 })); buzz([20, 30, 20]); },
     // leises Tippgeräusch für jede Schaltfläche; noHaptic = Aufrufer löst die Vibration selbst aus
-    tap(noHaptic) { tone(720, 0, 0.04, { type: 'triangle', vol: 0.07 }); if (!noHaptic) buzz(8); },
+    tap(noHaptic) { tone(720, 0, 0.04, { type: 'triangle', vol: 0.07, force: true }); if (!noHaptic) buzz(8, true); },
+    quiet,
     chat() { tone(880, 0, 0.07, { vol: 0.09 }); tone(1175, 0.06, 0.1, { vol: 0.09 }); },
     score(points) {
       if (points > 0) { tone(660, 0, 0.12); tone(990, 0.08, 0.18); }

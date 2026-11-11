@@ -105,7 +105,7 @@
     save();
     const totals = state.players.map((p) => total(p.scores));
     const best = Math.max(...totals);
-    const rows = state.players.map((p, i) => ({ name: p.name, score: totals[i], won: totals[i] === best }));
+    const rows = state.players.map((p, i) => ({ name: p.name, score: totals[i], won: totals[i] === best, yatzy: (p.scores.yatzy || 0) > 0 }));
     setPending([...pendingList(), { gameId: state.gameId, rows }]);
     flushPending().then(refreshBoard);
   }
@@ -171,10 +171,69 @@
   function boardHTML() {
     const top = boardRows();
     const rows = top.length
-      ? top.map((s, i) => `<div class="brow"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
+      ? top.map((s, i) => `<div class="brow" data-stat="${h(s.name)}" role="button" tabindex="0"><span class="rk">${i + 1}</span><span class="bn">${h(s.name)}</span><span class="bp">${s.pct} %</span><span class="br">Rekord ${s.best ?? '–'}</span></div>`).join('')
       : `<div class="bempty">${boardData ? 'Noch keine Spiele gespielt' : 'Lade …'}</div>`;
-    return `<div class="board"><div class="bt"><span>Rangliste</span><span class="bcap">(Siege in Prozent)</span></div>${rows}</div>`;
+    return `<div class="board"><div class="bt"><span>Rangliste</span><span class="bcap">(Siege in Prozent)</span></div>${rows}${top.length ? '<div class="bhint">Namen antippen für die Statistik</div>' : ''}</div>`;
   }
+
+  // ---------- Statistik einer Person (Antippen in der Rangliste) ----------
+  // Felder (alle ausser games/wins optional): draws, losses, avg, avgWin, avgDraw, avgLoss, best, yatzys, form (z. B. ['S','S','N','U','S'])
+  const fmt1 = (n) => (Math.round(n * 10) / 10).toString().replace('.', ',');
+  function openStats(name) {
+    const all = boardData || [];
+    const s = all.find((r) => r.name === name);
+    if (!s) return;
+    const g = s.games || 0;
+    const w = s.wins || 0, d = s.draws ?? null, l = s.losses ?? (d !== null ? g - w - d : null);
+    const pct = (x) => (g ? Math.round((100 * x) / g) : 0);
+    const seg = (n, cls) => (n > 0 ? `<i class="${cls}" style="flex:${n}"></i>` : '');
+    const rank = boardRows().findIndex((r) => r.name === name) + 1;
+    const grp = all.filter((r) => r.avg != null);
+    const grpAvg = grp.length > 1 ? grp.reduce((x, r) => x + r.avg * r.games, 0) / grp.reduce((x, r) => x + r.games, 0) : null;
+    const diff = s.avg != null && grpAvg != null ? Math.round(s.avg - grpAvg) : null;
+    const cell = (label, val, sub) => `<div class="sc"><b>${val}</b><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+    const form = (s.form || []).slice(-5).map((f) => `<span class="fm ${f === 'S' ? 'w' : f === 'N' ? 'l' : 'd'}">${f}</span>`).join('');
+    const el = document.createElement('div');
+    el.className = 'pop-overlay';
+    el.innerHTML = `<div class="pop stat-pop">
+      <div class="st-head"><span class="st-rk">${rank || ''}</span><h2>${h(s.name)}</h2><span class="st-big"><b>${pct(w)} %</b> Siegquote</span></div>
+      ${d !== null ? `<div class="st-bar">${seg(w, 'w')}${seg(d, 'd')}${seg(l, 'l')}</div>
+      <div class="st-leg"><span><i class="w"></i>${w} Siege</span><span><i class="d"></i>${d} Unentschieden</span><span><i class="l"></i>${l} Niederlagen</span></div>` : ''}
+      <div class="st-grid">
+        ${cell('Spiele', g)}
+        ${s.avg != null ? cell('Ø Punkte', Math.round(s.avg), diff === null ? '' : `${diff >= 0 ? '+' : ''}${diff} zum Gruppenschnitt`) : ''}
+        ${s.best != null ? cell('Rekord', s.best) : ''}
+        ${s.yatzys != null ? cell('Yatzys', s.yatzys, g ? `in ${pct(s.yatzys)} % der Spiele${s.yatzys ? ' · alle ' + fmt1(g / s.yatzys) + ' Spiele' : ''}` : '') : ''}
+      </div>
+      ${s.avgWin != null || s.avgDraw != null || s.avgLoss != null ? `<div class="st-sub">Ø Punkte je nach Ausgang</div>
+      <div class="st-row3">${cell('bei Sieg', s.avgWin != null ? Math.round(s.avgWin) : '–')}${cell('bei Remis', s.avgDraw != null ? Math.round(s.avgDraw) : '–')}${cell('bei Niederlage', s.avgLoss != null ? Math.round(s.avgLoss) : '–')}</div>` : ''}
+      ${form ? `<div class="st-sub">Letzte Spiele</div><div class="st-form">${form}<small>S Sieg · U Unentschieden · N Niederlage</small></div>` : ''}
+      <div class="st-sub" id="h2h-t" hidden>Direktvergleich</div><div id="h2h" hidden></div>
+      <button class="lime-btn" id="st-close">Schliessen</button></div>`;
+    document.body.appendChild(el);
+    el.onclick = (e) => { if (e.target === el) el.remove(); };
+    el.querySelector('#st-close').onclick = () => el.remove();
+    loadH2H(el, s.name);
+  }
+  // Direktvergleich: Gegner wählen, Siege gegeneinander und Ø Punkte in gemeinsamen Spielen
+  async function loadH2H(el, me) {
+    const rows = ((await Net.fetchH2H(me)) || []).sort((x, y) => y.games - x.games);
+    const box = el.querySelector('#h2h');
+    if (!rows.length || !box) return;
+    const draw = (i) => {
+      const r = rows[i];
+      const chips = rows.map((x, j) => `<button class="h-chip ${j === i ? 'on' : ''}" data-i="${j}">${h(x.b_name)}</button>`).join('');
+      box.innerHTML = `<div class="h-chips">${chips}</div>
+        <div class="h-score"><span><b>${r.a_wins}</b>${h(me)}</span><em>${r.ties ? r.ties + ' unentschieden' : r.games + ' Spiele'}</em><span><b>${r.b_wins}</b>${h(r.b_name)}</span></div>
+        <div class="st-bar">${r.a_wins ? `<i class="w" style="flex:${r.a_wins}"></i>` : ''}${r.ties ? `<i class="d" style="flex:${r.ties}"></i>` : ''}${r.b_wins ? `<i class="l" style="flex:${r.b_wins}"></i>` : ''}</div>
+        <div class="h-avg">Ø Punkte in diesen ${r.games} Spielen: <b>${r.a_avg}</b> zu <b>${r.b_avg}</b></div>`;
+      box.querySelectorAll('.h-chip').forEach((b) => b.onclick = () => draw(+b.dataset.i));
+    };
+    el.querySelector('#h2h-t').hidden = false; box.hidden = false;
+    draw(0);
+  }
+  document.addEventListener('click', (e) => { const r = e.target.closest && e.target.closest('[data-stat]'); if (r) openStats(r.dataset.stat); });
+
   async function refreshBoard() {
     const data = await Net.fetchBoard();
     if (data) boardData = data;
@@ -764,7 +823,7 @@
     setTimeout(() => t.remove(), ms + 50);
   }
   function myTurnText() {
-    if (!state.online || state.phase !== 'game') return;
+    if (!state.online || state.phase !== 'game' || Sfx.quiet()) return;   // nicht anzeigen, wenn die App gerade erst aus dem Hintergrund kommt
     bigBanner('Du bist dran!');
   }
 
