@@ -718,24 +718,37 @@
       if (pendingRoll) { const r = pendingRoll; pendingRoll = null; Dice3D.roll(r.values, r.mask); }
       else Dice3D.setDice(state.dice, state.held);
     }
-    // Punkte-Blase: gedrückt halten markiert sie, Finger wegwischen bricht ab, erst Loslassen auf der Blase wählt sie
+    // Punkte-Blase: gedrückt halten markiert sie, Finger wegwischen bricht ab, erst Loslassen auf der Blase wählt sie.
+    // Die Entscheidung fällt nur beim Loslassen und nur nach der letzten bekannten Fingerposition (auch wenn der durchsichtige
+    // Vibrations-Schalter unter der Blase beim Drücken schon einen Klick auslöst, wird dieser frühe Klick ignoriert).
     app.querySelectorAll('[data-cat]').forEach((b) => {
       b.style.touchAction = 'none';
-      const inside = (e) => { const r = b.getBoundingClientRect(), m = 6; return e.clientX >= r.left - m && e.clientX <= r.right + m && e.clientY >= r.top - m && e.clientY <= r.bottom + m; };
-      b.onpointerdown = (e) => {
-        if (busy || !isMyTurn() || e.button > 0) return;
-        b.classList.add('arm');
-        const move = (ev) => b.classList.toggle('arm', inside(ev));
-        const end = (ev) => {
-          window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel);
-          const ok = ev.type === 'pointerup' && inside(ev);
-          b.classList.remove('arm');
-          if (ok) choose(b.dataset.cat, b);
-        };
-        const up = end, cancel = end;
-        window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel);
+      let down = false, lx = 0, ly = 0, sx = 0, sy = 0, st = 0, fired = 0;
+      const pt = (e) => (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]) || e;
+      const inside = () => { const r = b.getBoundingClientRect(), m = 6; return lx >= r.left - m && lx <= r.right + m && ly >= r.top - m && ly <= r.bottom + m; };
+      const pick = () => { if (Date.now() - fired < 500) return; fired = Date.now(); choose(b.dataset.cat, b); };
+      const track = (e) => { const p = pt(e); lx = p.clientX; ly = p.clientY; if (down) b.classList.toggle('arm', inside()); };
+      const stop = () => {
+        window.removeEventListener('pointermove', track, true); window.removeEventListener('touchmove', track, true);
+        window.removeEventListener('pointerup', up, true); window.removeEventListener('touchend', up, true); window.removeEventListener('pointercancel', cancel, true);
+        down = false; b.classList.remove('arm');
       };
-      b.onclick = (e) => { if (e.detail === 0) choose(b.dataset.cat, b); };   // Tastatur und Hilfsfunktionen
+      const up = (e) => { if (!down) return; track(e); const ok = inside(); stop(); if (ok) pick(); };
+      const cancel = () => {   // vom System abgebrochen: nur als Tipp werten, wenn der Finger kaum bewegt wurde
+        const still = Math.abs(lx - sx) < 10 && Math.abs(ly - sy) < 10 && Date.now() - st < 500;
+        const ok = inside(); stop(); if (ok && still) pick();
+      };
+      b.onpointerdown = (e) => {
+        if (busy || !isMyTurn() || e.button > 0 || down) return;
+        down = true; st = Date.now(); lx = sx = e.clientX; ly = sy = e.clientY; b.classList.add('arm');
+        window.addEventListener('pointermove', track, true); window.addEventListener('touchmove', track, true);
+        window.addEventListener('pointerup', up, true); window.addEventListener('touchend', up, true); window.addEventListener('pointercancel', cancel, true);
+      };
+      b.onclick = (e) => {
+        if (down) return;                                  // früher Klick während des Drückens: ignorieren
+        if (e.detail === 0 && !st) { pick(); return; }     // Tastatur / Hilfsfunktion ohne Fingerberührung
+        if (st && Date.now() - st < 1500 && inside()) pick();   // Klick nach dem Loslassen (falls Loslassen nicht gemeldet wurde)
+      };
     });
     document.getElementById('roll').onclick = roll;
     document.getElementById('menu').onclick = openMenu;
