@@ -205,8 +205,6 @@
         ${s.best != null ? cell('Rekord', s.best) : ''}
         ${s.yatzys != null ? cell('Yatzys', s.yatzys, g ? `in ${pct(s.yatzys)} % der Spiele${s.yatzys ? ' · alle ' + fmt1(g / s.yatzys) + ' Spiele' : ''}` : '') : ''}
       </div>
-      ${s.avgWin != null || s.avgDraw != null || s.avgLoss != null ? `<div class="st-sub">Ø Punkte je nach Ausgang</div>
-      <div class="st-row3">${cell('bei Sieg', s.avgWin != null ? Math.round(s.avgWin) : '–')}${cell('bei Remis', s.avgDraw != null ? Math.round(s.avgDraw) : '–')}${cell('bei Niederlage', s.avgLoss != null ? Math.round(s.avgLoss) : '–')}</div>` : ''}
       ${form ? `<div class="st-sub">Letzte Spiele</div><div class="st-form">${form}<small>S Sieg · U Unentschieden · N Niederlage</small></div>` : ''}
       <div class="st-sub" id="h2h-t" hidden>Direktvergleich</div><div id="h2h" hidden></div>
       <button class="lime-btn" id="st-close">Schliessen</button></div>`;

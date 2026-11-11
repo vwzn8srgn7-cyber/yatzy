@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vibrations-Test</title>
+<style>
+  body { font: 17px/1.4 -apple-system, system-ui, sans-serif; margin: 0; padding: 18px; background: #2f9a5c; color: #fff; }
+  h1 { font-size: 22px; margin: 0 0 6px; } p { margin: 6px 0 14px; opacity: .9; }
+  button, .sw { display: block; width: 100%; margin: 0 0 12px; padding: 16px; border: 0; border-radius: 14px; background: #fff; color: #1d4d2c; font-size: 18px; font-weight: 700; text-align: left; }
+  button small, .sw small { display: block; font-weight: 400; font-size: 13px; color: #555; margin-top: 2px; }
+  .sw { display: flex; align-items: center; justify-content: space-between; }
+  #info { background: rgba(0,0,0,.25); border-radius: 12px; padding: 10px 12px; font-size: 14px; margin-bottom: 16px; white-space: pre-line; }
+  #log { font-size: 14px; opacity: .9; }
+</style></head><body>
+<h1>Vibrations-Test</h1>
+<p>Tippe jede Taste einzeln und merke dir, bei welchen es vibriert. Bei Taste 1 direkt den Schalter antippen.</p>
+<div id="info"></div>
+
+<label class="sw"><span>1. Echter Schalter<small>Direkt antippen</small></span><input type="checkbox" switch id="real"></label>
+<button id="b2">2. Verstecktes Feld (display:none)<small>Methode der bekannten Bibliothek</small></button>
+<button id="b3">3. Unsichtbar neben dem Bildschirm<small>So ist es gerade in der App</small></button>
+<button id="b4">4. Direkter Klick auf den Schalter<small>Schalter unsichtbar, aber gezeichnet</small></button>
+<button id="b5">5. Beim Loslassen statt beim Tippen<small>Auslösung bei touchend</small></button>
+<button id="b6">6. Dreimal kurz hintereinander<small>Drei Klicks im Abstand von 120 ms</small></button>
+<button id="b7">7. Vibration über die Browser-Funktion<small>navigator.vibrate</small></button>
+<div id="log"></div>
+
+<script>
+  const info = document.getElementById('info');
+  const ua = navigator.userAgent;
+  const m = ua.match(/OS (\d+)[_.](\d+)/);
+  info.textContent = 'iOS-Version: ' + (m ? m[1] + '.' + m[2] : 'unbekannt') + '\nAls App vom Home-Bildschirm: ' + (navigator.standalone ? 'ja' : 'nein') +
+    '\nnavigator.vibrate vorhanden: ' + (typeof navigator.vibrate === 'function' ? 'ja' : 'nein') + '\nSchalter-Darstellung: ' + (getComputedStyle(document.getElementById('real')).appearance || '?');
+  const log = (t) => { document.getElementById('log').textContent = 'Zuletzt: ' + t; };
+  function mk(style, id) {
+    const label = document.createElement('label'); label.setAttribute('aria-hidden', 'true'); label.style.cssText = style;
+    const input = document.createElement('input'); input.type = 'checkbox'; input.setAttribute('switch', ''); if (id) input.id = id;
+    label.appendChild(input); document.head.appendChild(label); return { label, input };
+  }
+  const L2 = mk('display:none'), L3 = mk('position:fixed;left:-60px;top:0;width:44px;height:30px;opacity:.01;pointer-events:none;'), L4 = mk('position:fixed;left:-60px;top:40px;width:44px;height:30px;opacity:.01;pointer-events:none;');
+  const L5 = mk('position:fixed;left:-60px;top:80px;width:44px;height:30px;opacity:.01;pointer-events:none;');
+  document.getElementById('b2').onclick = () => { L2.label.click(); log('Taste 2'); };
+  document.getElementById('b3').onclick = () => { L3.label.click(); log('Taste 3'); };
+  document.getElementById('b4').onclick = () => { L4.input.click(); log('Taste 4'); };
+  document.getElementById('b5').addEventListener('touchend', () => { L5.label.click(); log('Taste 5 (touchend)'); });
+  document.getElementById('b6').onclick = () => { L3.label.click(); setTimeout(() => L3.label.click(), 120); setTimeout(() => L3.label.click(), 240); log('Taste 6'); };
+  document.getElementById('b7').onclick = () => { if (navigator.vibrate) { navigator.vibrate(60); log('Taste 7'); } else log('Taste 7: nicht vorhanden'); };
+</script></body></html>
