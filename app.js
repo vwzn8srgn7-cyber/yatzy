@@ -660,7 +660,6 @@
     const actives = rolled && state.phase === 'game'; // Vorschau für alle: Blasen für den, der dran ist, Zahlen für die anderen
     let optIndex = 0;
 
-    const hdr = `<div class="hdr"><span></span>${state.players.map((p, i) => `<span class="hb ${i === state.current && state.phase === 'game' ? 'on' : ''} ${offline(p) ? 'off' : ''}" style="--pc:${COLORS[i]}"><i>${h(initial(p))}</i></span>`).join('')}${pad('<span class="hb"></span>')}</div>`;
     const header = `<div class="row hd" style="--n:${cols}"><span></span>${COLORS.slice(0, n).map((c) => `<span class="c" style="background:${c}"></span>`).join('')}${pad('<span class="c"></span>')}</div>`;
 
     const rows = ROW_ORDER.map((id) => {
@@ -696,7 +695,7 @@
 
     app.innerHTML = `
       <div class="game ${n >= 4 ? 'many' : 'few'}">
-        <section class="card" style="--ac:${curColor};--n:${cols}">${hdr}${header}${rows}</section>
+        <section class="card" style="--ac:${curColor};--n:${cols}">${header}${rows}</section>
         <aside class="side">
           <div class="players">${players}</div>
           <div class="dice" id="diceArea">${has3d() ? '' : state.dice.map(dieHTML).join('')}</div>
