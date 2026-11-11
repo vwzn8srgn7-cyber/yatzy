@@ -453,10 +453,7 @@
     try {
       if (navigator.share) { await navigator.share({ title: 'Yatzy', text: 'Spiel mit uns Yatzy!', url }); return; }
       await navigator.clipboard.writeText(url);
-      const t = document.createElement('div');
-      t.className = 'turn-toast'; t.style.setProperty('--pc', '#9edb2a'); t.textContent = 'Link kopiert ✓';
-      t.onanimationend = () => t.remove();
-      document.body.appendChild(t);
+      bigBanner('Link kopiert ✓', 1700);
     } catch { /* abgebrochen */ }
   }
   function wireSound() {
@@ -789,7 +786,7 @@
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
-    if (state.phase !== 'game') document.querySelectorAll('.turn-toast,.my-turn').forEach((t) => t.remove());
+    if (state.phase !== 'game') document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
     updateOfflinePop();
   }
 
