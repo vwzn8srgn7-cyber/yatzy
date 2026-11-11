@@ -910,7 +910,8 @@
   if (state.online && state.phase !== 'setup') connectOnline();
   render();
   const splashParam = new URLSearchParams(location.search).get('splash');   // ?splash=8 zeigt den Ladebildschirm 8 Sekunden lang (zum Ansehen)
-  setTimeout(hideSplash, splashParam === null ? 0 : (Number(splashParam) || 2.5) * 1000);
+  // Beim Start immer kurz zeigen (mindestens 0,9 s seit dem Öffnen), bei langsamem Laden entsprechend länger
+  setTimeout(hideSplash, splashParam === null ? Math.max(0, 900 - performance.now()) : (Number(splashParam) || 2.5) * 1000);
   flushPending().then(refreshBoard);
 
   // Heilt verlorene Nachrichten: alle melden ihren Stand, wer mehr weiss, schickt ihn
