@@ -21,6 +21,9 @@
 <button id="b5">5. Beim Loslassen statt beim Tippen<small>Auslösung bei touchend</small></button>
 <button id="b6">6. Dreimal kurz hintereinander<small>Drei Klicks im Abstand von 120 ms</small></button>
 <button id="b7">7. Vibration über die Browser-Funktion<small>navigator.vibrate</small></button>
+<label class="sw" for="sw8" id="b8"><span>8. Beschriftung für einen Schalter<small>Dein Finger tippt eine Beschriftung, der Schalter liegt daneben</small></span></label>
+<input type="checkbox" switch id="sw8" style="position:fixed;left:-60px;top:120px;opacity:.01;width:44px;height:30px">
+<button id="b9" style="position:relative;overflow:hidden">9. Unsichtbarer Schalter auf der Taste<small>Echter Schalter liegt durchsichtig über der Taste</small><input type="checkbox" switch id="sw9" style="position:absolute;inset:0;width:100%;height:100%;opacity:.02;margin:0"></button>
 <div id="log"></div>
 
 <script>
@@ -42,5 +45,7 @@
   document.getElementById('b4').onclick = () => { L4.input.click(); log('Taste 4'); };
   document.getElementById('b5').addEventListener('touchend', () => { L5.label.click(); log('Taste 5 (touchend)'); });
   document.getElementById('b6').onclick = () => { L3.label.click(); setTimeout(() => L3.label.click(), 120); setTimeout(() => L3.label.click(), 240); log('Taste 6'); };
+  document.getElementById('sw8').onchange = () => log('Taste 8');
+  document.getElementById('sw9').onchange = () => log('Taste 9');
   document.getElementById('b7').onclick = () => { if (navigator.vibrate) { navigator.vibrate(60); log('Taste 7'); } else log('Taste 7: nicht vorhanden'); };
 </script></body></html>
