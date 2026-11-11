@@ -20,7 +20,8 @@ body {
   overscroll-behavior: none; user-select: none; -webkit-user-select: none;
   overflow: hidden;
 }
-#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; box-sizing: border-box; padding-top: calc(env(safe-area-inset-top) + var(--top-extra, 0px)); }
+/* fest am Bildschirm statt 100dvh: iOS rechnet die Höhe in der Home-Bildschirm-App manchmal zu klein (grüner Streifen unten) */
+#app { max-width: 480px; margin: 0 auto; position: fixed; inset: 0; box-sizing: border-box; padding-top: calc(env(safe-area-inset-top) + var(--top-extra, 0px)); }
 button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 /* ---------- Setup ---------- */
