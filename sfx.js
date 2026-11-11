@@ -56,7 +56,7 @@
       if (!sw) {
         sw = document.createElement('label');
         sw.setAttribute('aria-hidden', 'true');
-        sw.style.display = 'none';
+        sw.style.cssText = 'position:fixed;left:-60px;top:0;width:44px;height:30px;opacity:.01;pointer-events:none;';
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.setAttribute('switch', '');
@@ -102,6 +102,8 @@
     turn() { tone(784, 0, 0.12, { vol: 0.14 }); tone(1047, 0.1, 0.22, { vol: 0.14 }); buzz(20); },
     hold() { tone(880, 0, 0.05, { type: 'triangle', vol: 0.085 }); buzz(8); },
     rec() { [784, 988, 1319].forEach((f, i) => tone(f, i * 0.08, 0.22, { type: 'triangle', vol: 0.13 })); buzz([20, 30, 20]); },
+    // leises Tippgeräusch für jede Schaltfläche; noHaptic = Aufrufer löst die Vibration selbst aus
+    tap(noHaptic) { tone(720, 0, 0.04, { type: 'triangle', vol: 0.07 }); if (!noHaptic) buzz(8); },
     chat() { tone(880, 0, 0.07, { vol: 0.09 }); tone(1175, 0.06, 0.1, { vol: 0.09 }); },
     score(points) {
       if (points > 0) { tone(660, 0, 0.12); tone(990, 0.08, 0.18); }
@@ -112,4 +114,11 @@
     win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.1 + i * 0.14, 0.45, { type: 'triangle', vol: 0.2 })); tone(1047, 0.7, 0.8, { vol: 0.12 }); },
   };
   root.Sfx = Sfx;
+
+  // Jede Schaltfläche macht ein kleines Geräusch (Ausnahmen haben schon einen eigenen Ton)
+  document.addEventListener('click', (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('button, a, [role="button"], [data-slot], [data-mode], [data-count], .lrow') : null;
+    if (!t || t.closest('[data-cat], [data-t], [data-e], canvas') || t.id === 'snd' || t.id === 'pm-sound') return;
+    Sfx.tap(t.id === 'roll');
+  }, true);
 })(window);

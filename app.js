@@ -771,14 +771,14 @@
   // Erinnerung, wenn der aktive Spieler 20 Sekunden nichts tut (online nur auf dem Gerät, das dran ist)
   function showTurnToast(text) { bigBanner(text, 2600); }
   let idleTimer = null;
-  function armIdle() {
+  function armIdle(first = 10000) {   // erste Erinnerung nach 10 Sekunden
     clearTimeout(idleTimer);
     if (state.phase !== 'game' || !isMyTurn()) return;
     idleTimer = setTimeout(() => {
       showTurnToast(`${state.players[state.current].name} ist dran`);
       if (state.online) Net.send({ t: 'nudge', gameId: state.gameId }); // alle anderen sehen es auch
-      armIdle(); // alle 20 Sekunden wiederholen, bis der Spieler reagiert
-    }, 20000);
+      armIdle(20000); // danach alle 20 Sekunden, bis der Spieler reagiert
+    }, first);
   }
 
   function render() {
