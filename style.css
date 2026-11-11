@@ -319,7 +319,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 /* 3D-Würfel: Zeichenfläche füllt den Würfelbereich; Knöpfe unten nebeneinander wie im Vorbild (mehr Platz für die Würfelspalte) */
 .dice { position: relative; }
 .dice canvas.dice3d { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
-.game.few .btns { flex-direction: row-reverse; align-items: flex-end; justify-content: center; gap: 8px; padding: 0 0 6px; }
+.game.few .btns { flex-direction: row-reverse; align-items: center; justify-content: center; gap: 8px; padding: 0 0 6px; }
 .game.few .btns .round.big { width: 80px; height: 80px; }
 .game.few .btns .round:not(.big) { width: 46px; height: 46px; }
 
@@ -329,7 +329,7 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .game.many .btns .round:not(.big) { width: 40px; height: 40px; }
 .btns .round svg { width: 56%; height: 56%; }
 .pl { position: relative; }
-.avatar.emoji { background: #ffd34d !important; font-size: 25px; line-height: 1; border-color: #fff; }
+.avatar.emoji { background: transparent !important; box-shadow: none; border: 0; overflow: hidden; font-size: 43px; line-height: 1; letter-spacing: 0; text-indent: 0; }
 .chat-bubble {
   position: absolute; left: 50px; top: -6px; z-index: 6; max-width: 150px; padding: 6px 10px; border-radius: 8px;
   background: rgba(32, 56, 44, .88); color: #fff; font-size: 15px; line-height: 1.2; white-space: nowrap;
@@ -344,3 +344,10 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .chat-pop .ce { display: flex; justify-content: space-around; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
 .chat-pop .ce button { background: none; font-size: 40px; line-height: 1; padding: 4px 6px; border-radius: 12px; }
 .chat-pop .ce button:active { background: #f3f3f3; }
+
+.yatzy-text { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -50%); white-space: nowrap;
+  font: 900 40px/1 ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; color: #fff; letter-spacing: 1px;
+  -webkit-text-stroke: 2px #e0485a; paint-order: stroke fill; text-shadow: 0 3px 0 #b02a3c, 0 6px 14px rgba(0,0,0,.4);
+  animation: yatzyPop 1.25s ease-out forwards; }
+@keyframes yatzyPop { 0% { transform: translate(-50%,-50%) scale(.3) rotate(-8deg); opacity: 0; } 15% { transform: translate(-50%,-50%) scale(1.25) rotate(-4deg); opacity: 1; }
+  30% { transform: translate(-50%,-50%) scale(1) rotate(-4deg); } 80% { opacity: 1; } 100% { transform: translate(-50%,-62%) scale(1.05) rotate(-4deg); opacity: 0; } }

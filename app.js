@@ -43,7 +43,7 @@
   let offSince = 0;          // seit wann ist der aktive Spieler offline?
   let chatShow = {};         // Nachrichten, die gerade bei einem Avatar angezeigt werden: Platz -> { kind, value, until }
   let chatTimer = null, lastChatSent = 0;
-  const CHAT_TEXTS = ['Gut gespielt!', 'Viel Glück!', 'Danke!', 'Wow!', 'Gutes Spiel!', 'Ups!'];
+  const CHAT_TEXTS = ['Bravo!', 'Glück!', 'Danke!', 'Wow!', 'Hee!', 'Ups!'];
   const CHAT_EMOJIS = ['😁', '😜', '😮', '😢', '😠'];
   let takenSlots = new Set(); // Namen, die im Raum schon vergeben sind
 
@@ -243,6 +243,18 @@
     }
   }
 
+  // Grosser "YATZY!"-Schriftzug zur Explosion; hängt am Seitenrand, damit er das Neuzeichnen überlebt
+  function yatzyText(el) {
+    const r = el.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'yatzy-text';
+    t.textContent = 'YATZY!';
+    t.style.left = (r.left + r.width / 2) + 'px';
+    t.style.top = (r.top + r.height / 2) + 'px';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1300);
+  }
+
   // Effekt der Punktewahl bei den anderen: Zahl in der Zelle + Burst + Ton
   let pickPlayed = false;
   function showPick(m) {
@@ -253,6 +265,7 @@
       const b = document.createElement('div');
       b.className = 'burst';
       cell.appendChild(b);
+      if (m.cat === 'yatzy' && m.pts > 0) yatzyText(cell);
       setTimeout(() => b.remove(), 600);
     }
     if (m.cat === 'yatzy' && m.pts > 0) Sfx.yatzy(); else Sfx.score(m.pts);
@@ -382,6 +395,7 @@
     burst.className = 'burst';
     bubble.parentElement.appendChild(burst);
     const pts = score(catId, state.dice);
+    if (catId === 'yatzy' && pts > 0) yatzyText(bubble);
     if (catId === 'yatzy' && pts > 0) Sfx.yatzy(); else Sfx.score(pts);
     if (state.online) Net.send({ t: 'pick', gameId: state.gameId, cat: catId, pts }); // alle sehen den Effekt
     setTimeout(() => commit(catId), 480);
@@ -520,7 +534,7 @@
   function showChat(seat, kind, value) {
     if (!state.players || seat < 0 || seat >= state.players.length) return;
     if (kind === 'text' ? !CHAT_TEXTS.includes(value) : !CHAT_EMOJIS.includes(value)) return;   // nur bekannte Nachrichten annehmen
-    chatShow[seat] = { kind, value, until: Date.now() + 3200 };
+    chatShow[seat] = { kind, value, until: Date.now() + 5000 };
     Sfx.chat();
     if (state.phase === 'game' || state.phase === 'over') render();
     clearTimeout(chatTimer);
@@ -529,7 +543,7 @@
       Object.keys(chatShow).forEach((k) => { if (chatShow[k].until <= now) delete chatShow[k]; else left++; });
       if (state.phase === 'game' || state.phase === 'over') render();
       if (left) chatTimer = setTimeout(tick, 400);
-    }, 3300);
+    }, 5100);
   }
   function sendChat(kind, value) {
     const now = Date.now();
@@ -659,7 +673,7 @@
     el.innerHTML = `<div class="pop"><h2>Menü</h2>
       <button class="lime-btn" id="pm-back">Zurück zum Spiel</button>
       <button class="ghost-btn" id="pm-sound">${Sfx.isOn() ? '🔊 Ton: an' : '🔇 Ton: aus'}</button>
-      <button class="ghost-btn" id="pm-new">${onl ? 'Spiel verlassen' : 'Neues Spiel'}</button></div>`;
+      <button class="ghost-btn" id="pm-new">Spiel verlassen</button></div>`;
     document.body.appendChild(el);
     el.onclick = (e) => { if (e.target === el) el.remove(); };
     el.querySelector('#pm-back').onclick = () => el.remove();
@@ -674,10 +688,10 @@
         <p style="margin:0;color:#555">Du kannst über die Lobby wieder beitreten, solange das Spiel läuft.</p>
         <button class="lime-btn" id="pm-no">Nein</button>
         <button class="ghost-btn" id="pm-yes">Ja, verlassen</button>`
-        : `<h2>Wirklich neues Spiel starten?</h2>
+        : `<h2>Spiel wirklich verlassen?</h2>
         <p style="margin:0;color:#555">Der aktuelle Spielstand geht verloren.</p>
         <button class="lime-btn" id="pm-no">Nein</button>
-        <button class="ghost-btn" id="pm-yes">Ja, neues Spiel</button>`;
+        <button class="ghost-btn" id="pm-yes">Ja, verlassen</button>`;
       el.querySelector('#pm-no').onclick = () => el.remove();
       el.querySelector('#pm-yes').onclick = () => { el.remove(); if (onl) leaveRoom(); else newGame(); };
     };
