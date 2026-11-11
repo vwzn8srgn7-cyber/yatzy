@@ -511,7 +511,7 @@
     try {
       if (navigator.share) { await navigator.share({ title: 'Yatzy', text: 'Spiel mit uns Yatzy!', url }); return; }
       await navigator.clipboard.writeText(url);
-      bigBanner('Link kopiert ✓', 1700);
+      bigBanner('Link kopiert ✓', 1700, true);
     } catch { /* abgebrochen */ }
   }
   function wireSound() {
@@ -856,10 +856,11 @@
   }
   setInterval(() => { if (window.Dice3D) syncDiceSwitches(); }, 200);
 
-  function bigBanner(text, ms = 1700) {
+  function bigBanner(text, ms = 1700, keep = false) {   // keep: bleibt auch ausserhalb des Spiels (z. B. «Link kopiert»)
     document.querySelectorAll('.my-turn').forEach((t) => t.remove());
     const t = document.createElement('div');
     t.className = 'my-turn';
+    if (keep) t.dataset.keep = '1';
     t.textContent = text;
     t.style.animationDuration = ms + 'ms';
     document.body.appendChild(t);
@@ -889,7 +890,7 @@
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
-    if (state.phase !== 'game') document.querySelectorAll('.turn-toast').forEach((t) => t.remove());
+    if (state.phase !== 'game') document.querySelectorAll('.turn-toast, .my-turn:not([data-keep])').forEach((t) => t.remove());
     updateOfflinePop();
   }
 
