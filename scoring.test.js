@@ -29,5 +29,11 @@ const full = { ones: 3, twos: 6, threes: 9, fours: 12, fives: 15, sixes: 18 }; /
 assert.strictEqual(bonus(full), 50);
 assert.strictEqual(total(full), 113);
 assert.strictEqual(bonus({ ones: 1 }), 0);
+// Bonus erst, wenn alle sechs oberen Felder gefüllt sind
+const fiveOfSix = { ones: 5, twos: 10, threes: 15, fours: 20, fives: 25 }; // 75, aber Sechser fehlt noch
+assert.strictEqual(bonus(fiveOfSix), 0);
+assert.strictEqual(total(fiveOfSix), 75);
+assert.strictEqual(bonus({ ...fiveOfSix, sixes: 0 }), 50);
+assert.strictEqual(bonus({ ones: 1, twos: 2, threes: 3, fours: 4, fives: 5, sixes: 6 }), 0);
 
 console.log('Alle Tests bestanden');

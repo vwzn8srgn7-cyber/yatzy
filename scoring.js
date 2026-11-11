@@ -71,7 +71,9 @@
     return UPPER_IDS.reduce((a, id) => a + (scores[id] || 0), 0);
   }
   function bonus(scores) {
-    return upperSum(scores) >= BONUS_THRESHOLD ? BONUS_POINTS : 0;
+    // Bonus erst, wenn alle sechs oberen Felder (Einser bis Sechser) ausgefüllt sind und zusammen mindestens 63 ergeben
+    const allFilled = UPPER_IDS.every((id) => scores[id] !== undefined);
+    return allFilled && upperSum(scores) >= BONUS_THRESHOLD ? BONUS_POINTS : 0;
   }
   function total(scores) {
     return Object.values(scores).reduce((a, b) => a + b, 0) + bonus(scores);

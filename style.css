@@ -148,10 +148,10 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 /* ---------- Gewinner ---------- */
 .win {
   position: fixed; inset: 0; z-index: 20; overflow: hidden; display: flex; flex-direction: column; align-items: center; color: #fff;
-  background: radial-gradient(120% 90% at 50% 20%, #5fc489, #2f9a5c 55%, #20784a); padding: 70px 24px 28px;
+  background: radial-gradient(120% 90% at 50% 20%, #5fc489, #2f9a5c 55%, #20784a); padding: calc(70px + env(safe-area-inset-top, 0px)) 24px 28px;
 }
 .win .leaf { position: absolute; width: 120px; height: 50px; border-radius: 100% 0 100% 0; background: #1d6a78; opacity: .55; }
-.win .menu-btn { position: absolute; top: 18px; left: 16px; }
+.win .menu-btn { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 16px; z-index: 3; }
 .win .crown { width: 110px; height: 60px; margin-bottom: -30px; z-index: 2; filter: drop-shadow(0 3px 3px rgba(0,0,0,.3)); }
 .win .big-avatar {
   width: 150px; height: 150px; border-radius: 50%; border: 7px solid #f0b72b; display: grid; place-items: center; font-size: 72px; font-weight: 800;
@@ -462,3 +462,12 @@ html.nohz input.hz { display: none; }
 
 .bubble.arm { filter: brightness(1.12); transform: translateY(-50%) scale(.94); }
 .game.many .bubble.arm { transform: scale(.92); }
+
+/* Nur hochkant: im Querformat auf dem Handy ein Hinweis (iOS erlaubt Web-Apps keine Sperre) */
+#rot { display: none; }
+@media (orientation: landscape) and (max-height: 520px) {
+  #rot { position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: radial-gradient(120% 90% at 30% 10%, #4cb87e, #2f9a5c 60%, #1f7a47); color: #fff; font-size: 22px; font-weight: 800; text-align: center; }
+  #rot span { font-size: 54px; line-height: 1; display: inline-block; animation: rotHint 1.6s ease-in-out infinite; }
+}
+@keyframes rotHint { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0); } }
