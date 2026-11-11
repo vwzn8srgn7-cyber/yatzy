@@ -126,7 +126,7 @@
       .filter((r) => prev[r.name.toLowerCase()] !== undefined && r.score > prev[r.name.toLowerCase()]);
   }
   const newRecords = () => calcRecords(state.players);
-  function clearFx() { document.querySelectorAll('.rec-fx,.my-turn').forEach((e) => e.remove()); }
+  function clearFx() { document.querySelectorAll('.rec-fx,.my-turn,.ser-pop').forEach((e) => e.remove()); }
   // Live-Hinweis: sobald jemand schon während des Spiels seinen bisherigen Bestwert übertrifft (einmal pro Spiel und Person)
   let liveRecGame = null, liveRecDone = {};
   function checkLiveRecord() {
@@ -241,9 +241,43 @@
 
   // ---------- Online: Verbindung & Nachrichten ----------
   const pub = () => {
-    const { players, current, dice, held, rollsLeft, phase, gameId, seq, records } = state;
-    return { players, current, dice, held, rollsLeft, phase, gameId, seq, records };
+    const { players, current, dice, held, rollsLeft, phase, gameId, seq, records, series } = state;
+    return { players, current, dice, held, rollsLeft, phase, gameId, seq, records, series };
   };
+  const presenceSt = () => (state.phase === 'game' ? 'game' : state.phase === 'over' ? 'over' : 'lobby');
+
+  // ---------- Serie: Zwischenstand über bis zu 5 Online-Spiele ----------
+  const SERIES_LEN = Number(new URLSearchParams(location.search).get('serie')) || 5;   // ?serie=2 nur zum Ausprobieren
+  const emptySeries = () => ({ games: 0, p: {} });
+  // Stand der Serie nach dem (beendeten) aktuellen Spiel; ändert nichts am Original
+  function seriesAfter(s, players) {
+    const base = s || emptySeries();
+    const totals = players.map((p) => total(p.scores));
+    const top = Math.max(...totals);
+    const out = { games: base.games + 1, p: {} };
+    Object.keys(base.p).forEach((k) => { out.p[k] = { ...base.p[k] }; });
+    players.forEach((p, i) => {
+      const e = out.p[p.id] || (out.p[p.id] = { name: p.name, wins: 0, yatzys: 0, best: 0, games: 0 });
+      e.name = p.name; e.games++;
+      if (totals[i] === top) e.wins++;
+      if ((p.scores.yatzy || 0) > 0) e.yatzys++;
+      e.best = Math.max(e.best, totals[i]);
+    });
+    return out;
+  }
+  // Wer wartet in der Lobby auf die nächste Runde (bereit, nicht im laufenden Spiel)
+  const waitingPlayers = () => lobby.filter((p) => p.st === 'lobby' && p.ready && !(state.players || []).some((q) => q.id === p.id)).sort((x, y) => x.ts - y.ts);
+  // Spieler der nächsten Runde: bisherige plus Wartende (max. 4); bei Platzmangel zuerst Abwesende ersetzen
+  function nextPlayers() {
+    const wait = waitingPlayers().map(({ id, name }) => ({ id, name }));
+    let keep = state.players.map(({ id, name }) => ({ id, name }));
+    if (keep.length + wait.length > 4 && wait.length) {
+      const away = keep.filter((p) => !onlineIds.has(p.id));
+      while (keep.length + wait.length > 4 && away.length) keep.splice(keep.indexOf(away.shift()), 1);
+    }
+    const add = wait.slice(0, Math.max(0, 4 - keep.length));
+    return { players: keep.concat(add), joined: add.length > 0 };
+  }
   function broadcastState(rolled) {
     if (state.online) Net.send({ t: 'state', s: pub(), rolled: rolled || [] });
   }
@@ -252,7 +286,7 @@
     const { room, name, slot } = state.online;
     netStatus = 'Verbinde …';
     Net.join(room, {
-      id: myId, name, slot,
+      id: myId, name, slot, st: presenceSt(),
       onMsg: onNetMsg,
       onPresence,
       onStatus(st) {
@@ -284,9 +318,10 @@
       if (myIdx >= 4) { leaveRoom('Der Raum ist voll (max. 4 Spieler).'); return; }
       // Derselbe Name zweimal (gleichzeitig gewählt)? Wer später kam, wählt neu.
       if (myIdx > 0 && list.slice(0, myIdx).some((p) => p.slot === list[myIdx].slot)) { leaveRoom('Dieser Name ist gerade vergeben. Bitte einen anderen wählen.'); return; }
-      // Alle bereit (mindestens 2)? Der erste in der festen Reihenfolge startet für alle.
-      const shown = list.slice(0, 4);
-      if (shown.length >= 2 && shown.every((p) => p.ready) && shown[0].id === myId) { startOnlineGame(shown); return; }
+      // Läuft schon eine Runde im Raum, wartet man in der Lobby (Warteliste), bis sie vorbei ist und neu gestartet wird.
+      // Sonst: alle bereit (mindestens 2)? Der erste in der festen Reihenfolge startet für alle.
+      const shown = list.filter((p) => p.st === 'lobby').slice(0, 4);
+      if (!list.some((p) => p.st !== 'lobby') && shown.length >= 2 && shown.every((p) => p.ready) && shown[0].id === myId) { startOnlineGame(shown); return; }
       render();
     } else if (!busy) {
       render(); // Avatare abdunkeln und Offline-Hinweis aktualisieren
@@ -297,7 +332,7 @@
     state = {
       setup: state.setup, online: state.online, phase: 'game',
       players: m.players.map((p) => ({ id: p.id, name: p.name, scores: {} })),
-      current: 0, dice: EMPTY_DICE(), held: NO_HOLD(), rollsLeft: 3, gameId: m.gameId, seq: 0,
+      current: 0, dice: EMPTY_DICE(), held: NO_HOLD(), rollsLeft: 3, gameId: m.gameId, seq: 0, series: m.series || emptySeries(),
     };
     justRolled = []; busy = false; offSince = 0;
     clearFx();
@@ -309,7 +344,10 @@
   function onNetMsg(m) {
     if (!state.online || !m) return;
     if (m.t === 'start') {
-      if (m.gameId !== state.gameId && m.players.some((p) => p.id === myId)) beginOnline(m);
+      if (m.gameId === state.gameId || !m.players.some((p) => p.id === myId)) return;
+      // Zwei fast gleichzeitige Starts: das Spiel mit der kleineren Nummer gilt, damit alle dasselbe spielen
+      if (state.phase === 'game' && state.seq === 0 && state.gameId < m.gameId) return;
+      beginOnline(m);
     } else if (m.t === 'state') {
       applyRemote(m);
     } else if (m.t === 'hello') {
@@ -364,9 +402,7 @@
         if (s.players.some((p) => p.id === myId)) {
           state = { ...state, ...s, recordedId: undefined };
           justRolled = []; busy = false; save(); render();
-        } else if (state.phase === 'lobby') {
-          leaveRoom('Im Raum läuft gerade ein Spiel. Versuch es nach dem Spielende nochmal.');
-        }
+        }   // sonst: in der Lobby auf der Warteliste bleiben
       }
       return;
     }
@@ -407,8 +443,8 @@
     save(); render();
     connectOnline();
   }
-  function startOnlineGame(players) {
-    const m = { gameId: rid(), players: players.map(({ id, name }) => ({ id, name })) };
+  function startOnlineGame(players, series) {
+    const m = { gameId: rid(), players: players.map(({ id, name }) => ({ id, name })), series: series || emptySeries() };
     beginOnline(m);
     Net.send({ t: 'start', ...m });
   }
@@ -567,20 +603,30 @@
   }
 
   function renderLobby() {
-    const list = lobby.slice(0, 4);
-    const me = list.find((p) => p.id === myId);
+    const playing = lobby.filter((p) => p.st !== 'lobby');
+    const running = playing.length > 0;
+    const inLobby = lobby.filter((p) => p.st === 'lobby');
+    const waitOrder = inLobby.filter((p) => p.ready).sort((x, y) => x.ts - y.ts);
+    const me = lobby.find((p) => p.id === myId);
     const iReady = !!(me && me.ready);
-    const rows = list.map((p, i) => `
-        <div class="lrow">${avatar(p, i)}<span class="nm">${h(p.name)}${p.id === myId ? ' (du)' : ''}</span>
-        <span class="tag ${p.ready ? '' : 'wait'}">${p.ready ? 'Bereit ✓' : 'wartet'}</span></div>`).join('');
+    const row = (p, tag) => `<div class="lrow">${avatar(p, lobby.indexOf(p))}<span class="nm">${h(p.name)}${p.id === myId ? ' (du)' : ''}</span>${tag}</div>`;
+    const rows = running
+      ? playing.map((p) => row(p, '<span class="tag play">spielt</span>')).join('')
+        + inLobby.map((p) => row(p, p.ready ? `<span class="tag">Warteliste ${waitOrder.indexOf(p) + 1}</span>` : '<span class="tag wait">wartet</span>')).join('')
+      : inLobby.slice(0, 4).map((p) => row(p, `<span class="tag ${p.ready ? '' : 'wait'}">${p.ready ? 'Bereit ✓' : 'wartet'}</span>`)).join('');
+    const hint = netStatus
+      || (running
+        ? (iReady ? 'Du bist auf der Warteliste. Sobald die Runde vorbei ist und die anderen „Erneut spielen“ tippen, bist du automatisch dabei.'
+          : 'Eine Runde läuft gerade. Tippe auf „Start“: Du kommst auf die Warteliste und spielst ab der nächsten Runde automatisch mit.')
+        : 'Das Spiel startet, sobald alle auf „Start“ tippen.');
     app.innerHTML = `
       <div class="setup lobby">
         <button class="round snd" id="snd" aria-label="Ton an/aus">${soundIcon()}</button>
         ${logoHTML()}
-        <div class="hint2">${h(netStatus || 'Das Spiel startet, sobald alle auf „Start“ tippen.')}</div>
+        <div class="hint2">${h(hint)}</div>
         <div class="lplayers">${rows || '<div class="bempty">Verbinde …</div>'}</div>
-        <button class="lime-btn" id="oready" ${me ? '' : 'disabled'}>${iReady ? 'Bereit ✓ (tippen zum Abbrechen)' : 'Start'}</button>
-        ${list.length < 2 && iReady ? '<div class="hint2">Warte auf Mitspieler …</div>' : ''}
+        <button class="lime-btn" id="oready" ${me ? '' : 'disabled'}>${running ? (iReady ? 'Auf der Warteliste ✓ (tippen zum Abbrechen)' : 'Start (Warteliste)') : iReady ? 'Bereit ✓ (tippen zum Abbrechen)' : 'Start'}</button>
+        ${!running && inLobby.length < 2 && iReady ? '<div class="hint2">Warte auf Mitspieler …</div>' : ''}
         <button class="link" id="oleave">Verlassen</button>
       </div>`;
     wireSound();
@@ -813,6 +859,44 @@
       <circle cx="55" cy="12" r="5" fill="#e0222b"/><circle cx="14" cy="22" r="4" fill="#e0222b"/><circle cx="96" cy="22" r="4" fill="#e0222b"/></svg>`;
   }
 
+  // Zwischenstand nach jedem Online-Spiel (klein, blendet sich aus) und Abrechnung nach 5 Spielen (kompakt, mit X)
+  let seriesShownFor = null;
+  function showSeriesPopup(gid) {
+    if (state.gameId !== gid || state.phase !== 'over' || !state.online) return;
+    document.querySelectorAll('.ser-pop').forEach((e) => e.remove());
+    const after = seriesAfter(state.series, state.players);
+    const list = state.players.map((p) => after.p[p.id]).filter(Boolean).sort((x, y) => y.wins - x.wins || y.best - x.best);
+    const wins = (n) => `${n} ${n === 1 ? 'Sieg' : 'Siege'}`;
+    const topNow = Math.max(...state.players.map((p) => total(p.scores)));
+    const last = new Set(state.players.filter((p) => total(p.scores) === topNow).map((p) => p.name));   // Sieger dieses Spiels: Name grün
+    const el = document.createElement('div');
+    if (after.games < SERIES_LEN) {
+      el.className = 'ser-pop mini';
+      el.innerHTML = `<b>Spiel ${after.games}/${SERIES_LEN}</b><div class="ser-chips">${list.map((e) => `<span${last.has(e.name) ? ' class="lw"' : ''}>${h(e.name)} <em>${e.wins}</em></span>`).join('')}</div>`;
+      el.onclick = () => el.remove();
+      document.body.appendChild(el);
+      setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 7000);
+      return;
+    }
+    const names = (arr) => arr.map((e) => h(e.name)).join(' & ');
+    const topScore = Math.max(...list.map((e) => e.best)), topY = Math.max(...list.map((e) => e.yatzys));
+    let rank = 0, prev = null;
+    const rows = list.map((e, i) => { if (e.wins !== prev) { rank = i; prev = e.wins; } return `<div class="ser-row"><span class="medal">${['🥇', '🥈', '🥉'][rank] || rank + 1}</span><span class="nm">${h(e.name)}</span><b>${wins(e.wins)}</b></div>`; }).join('');
+    el.className = 'pop-overlay ser-pop';
+    el.innerHTML = `<div class="pop ser-box">
+      <button class="ser-x" aria-label="Schliessen">✕</button>
+      <h2>🏁 Resultat <small>nach ${SERIES_LEN} Spielen</small></h2>
+      <div class="ser-rows">${rows}</div>
+      <div class="ser-facts">
+        <div><span>🎯 Höchste Punktzahl</span><b>${names(list.filter((e) => e.best === topScore))} · ${topScore}</b></div>
+        <div><span>🎲 Meiste Yatzys</span><b>${topY ? `${names(list.filter((e) => e.yatzys === topY))} · ${topY}` : 'keiner'}</b></div>
+      </div></div>`;
+    el.querySelector('.ser-x').onclick = () => el.remove();
+    el.onclick = (e) => { if (e.target === el) el.remove(); };
+    document.body.appendChild(el);
+    Sfx.rec();
+  }
+
   function renderOver() {
     const ranked = state.players.map((p, i) => ({ p, i, t: total(p.scores) })).sort((a, b) => b.t - a.t);
     const [w, ...rest] = ranked;
@@ -829,16 +913,28 @@
       <div class="winner-name">${h(w.p.name)}</div>
       <div class="pts"><span id="wcount">0</span> PUNKTE</div>
       <div class="others">${rest.map((r, k) => `<div class="orow"><span class="medal">${['🥈', '🥉'][k] || (k + 2)}</span>${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
+      ${isOnline() && waitingPlayers().length ? `<div class="waitnote">⏳ ${waitingPlayers().map((p) => h(p.name)).join(' und ')} ${waitingPlayers().length > 1 ? 'spielen' : 'spielt'} jetzt auch mit 😁</div>` : ''}
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
     document.body.appendChild(el);
     // Punkte des Gewinners zählen hoch
     const wc = el.querySelector('#wcount'); const t0 = performance.now();
     (function tick(now) { const p = Math.min(1, ((now || performance.now()) - t0 - 800) / 1100); wc.textContent = Math.round(w.t * Math.max(0, 1 - Math.pow(1 - p, 3))); if (p < 1 && document.body.contains(el)) requestAnimationFrame(tick); else wc.textContent = w.t; })();
     const recs = state.records && state.records.length ? state.records : newRecords();
-    if (recs.length && state.recShown !== state.gameId) { state.recShown = state.gameId; save(); showRecord(recs); }
+    const recNew = recs.length && state.recShown !== state.gameId;
+    if (recNew) { state.recShown = state.gameId; save(); showRecord(recs); }
+    if (isOnline() && state.players.length > 1 && seriesShownFor !== state.gameId) {
+      seriesShownFor = state.gameId;
+      const gid = state.gameId;
+      setTimeout(() => showSeriesPopup(gid), recNew ? 4500 : 2600);   // erst nach der Sieger-Animation (und dem Rekord-Hinweis)
+    }
     el.querySelector('#again').onclick = () => {
       el.remove();
-      if (isOnline()) startOnlineGame(state.players);
+      if (isOnline()) {
+        // Neue Runde mit den Wartenden dazu; neue Person: Serie von vorn, sonst weiterzählen (nach 5 Spielen neue Serie)
+        const nx = nextPlayers();
+        const after = seriesAfter(state.series, state.players);
+        startOnlineGame(nx.players, nx.joined || after.games >= SERIES_LEN ? emptySeries() : after);
+      }
       else startGame(state.players.map((p) => p.name));
     };
     el.querySelector('#wmenu').onclick = () => { el.remove(); if (isOnline()) leaveRoom(); else newGame(); };
@@ -926,6 +1022,8 @@
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
     if (state.phase !== 'game') document.querySelectorAll('.my-turn:not([data-keep])').forEach((t) => t.remove());
+    if (state.phase !== 'over') document.querySelectorAll('.ser-pop').forEach((t) => t.remove());
+    if (state.online) Net.setMeta(state.phase === 'lobby' ? { st: 'lobby' } : { st: presenceSt(), ready: false });
     updateOfflinePop();
   }
 

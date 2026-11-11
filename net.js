@@ -20,7 +20,7 @@
       const metas = state[key];
       const m = metas[metas.length - 1];
       if (m.peek) return; // stille Beobachter (Namenswahl) zählen nicht als Spieler
-      arr.push({ id: m.id || key, name: m.name, slot: m.slot ?? 9, ready: !!m.ready, ts: m.ts || 0 });
+      arr.push({ id: m.id || key, name: m.name, slot: m.slot ?? 9, ready: !!m.ready, ts: m.ts || 0, st: m.st || 'lobby' });   // st: lobby | game | over
     });
     // Feste Reihenfolge: Platz der Namenswahl (Vreni, Peter, Marco, Gast), dann Beitrittszeit
     arr.sort((a, b) => (a.slot - b.slot) || (a.ts - b.ts) || a.id.localeCompare(b.id));
@@ -55,7 +55,7 @@
     leave();
     if (!client()) { o.onStatus('NO_LIB'); return; }
     cb = o;
-    meta = { id: o.id, name: o.name, slot: o.slot, ready: false, ts: Date.now() };
+    meta = { id: o.id, name: o.name, slot: o.slot, ready: false, ts: Date.now(), st: o.st || 'lobby' };
     const c = sb.channel('yatzy-' + room, { config: { broadcast: { self: false, ack: false }, presence: { key: o.id } } });
     ch = c;
     c.on('broadcast', { event: 'm' }, ({ payload }) => { if (c === ch) cb.onMsg(payload); })
@@ -75,11 +75,13 @@
       });
   }
 
-  async function setReady(ready) {
-    if (!ch || !meta) return;
-    meta = { ...meta, ready };
-    try { await ch.track(meta); } catch { /* ignorieren */ }
+  // Eigene Presence-Angaben ändern (bereit, Lobby/Spiel/Spielende); nur senden, wenn sich etwas ändert
+  async function setMeta(patch) {
+    if (!meta || Object.keys(patch).every((k) => meta[k] === patch[k])) return;
+    meta = { ...meta, ...patch };
+    if (ch && tracked) { try { await ch.track(meta); } catch { /* ignorieren */ } }
   }
+  const setReady = (ready) => setMeta({ ready });
 
   function send(payload) {
     if (ch && tracked) ch.send({ type: 'broadcast', event: 'm', payload });
@@ -115,5 +117,5 @@
     return error ? null : data;
   }
 
-  root.Net = { join, leave, peek, unpeek, send, setReady, saveResult, fetchBoard, fetchH2H, connected: () => !!(ch && tracked) };
+  root.Net = { join, leave, peek, unpeek, send, setReady, setMeta, saveResult, fetchBoard, fetchH2H, connected: () => !!(ch && tracked) };
 })(window);
