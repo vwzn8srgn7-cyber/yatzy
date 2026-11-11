@@ -9,7 +9,7 @@
   const ONLINE_NAMES = ['Vreni', 'Peter', 'Marco', 'Gast']; // Gast darf einen eigenen Namen eingeben
   const app = document.getElementById('app');
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-  const DEFAULT_NAMES = ['Vreni', 'Peter', 'Marco', 'Spieler 4'];
+  const DEFAULT_NAMES = ['Vreni', 'Peter', 'Marco', 'Gast'];
   const COLORS = ['#2e8bd0', '#e0485a', '#4caf50', '#f2c14e']; // Blau, Rot, Grün, Gelb
   const ROW_ORDER = ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes', '_sum', '_bonus',
     'pair', 'twoPairs', 'three', 'four', 'small', 'large', 'full', 'chance', 'yatzy', '_total'];
@@ -29,6 +29,7 @@
   })();
 
   let state = load() || { phase: 'setup', setup: { count: 1, names: DEFAULT_NAMES.slice() } };
+  if (state.setup && state.setup.names && state.setup.names[3] === 'Spieler 4') state.setup.names[3] = 'Gast';   // alter Standardname bei bereits gespeicherten Einstellungen
   let setupMode = 'online';  // beim Start immer „Online“
   let justRolled = [];
   let pendingRoll = null;   // Wurf, der als 3D-Animation gezeigt werden soll (einmalig)
