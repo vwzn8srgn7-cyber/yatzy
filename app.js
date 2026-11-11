@@ -126,7 +126,7 @@
       .filter((r) => prev[r.name.toLowerCase()] !== undefined && r.score > prev[r.name.toLowerCase()]);
   }
   const newRecords = () => calcRecords(state.players);
-  function clearFx() { document.querySelectorAll('.rec-fx,.turn-toast,.my-turn').forEach((e) => e.remove()); }
+  function clearFx() { document.querySelectorAll('.rec-fx,.my-turn').forEach((e) => e.remove()); }
   // Live-Hinweis: sobald jemand schon während des Spiels seinen bisherigen Bestwert übertrifft (einmal pro Spiel und Person)
   let liveRecGame = null, liveRecDone = {};
   function checkLiveRecord() {
@@ -925,7 +925,7 @@
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
-    if (state.phase !== 'game') document.querySelectorAll('.turn-toast, .my-turn:not([data-keep])').forEach((t) => t.remove());
+    if (state.phase !== 'game') document.querySelectorAll('.my-turn:not([data-keep])').forEach((t) => t.remove());
     updateOfflinePop();
   }
 

@@ -54,28 +54,12 @@
     return noiseBuf;
   }
 
-  // Haptik: Android/Chrome per Vibration API, iOS-Safari (17.4+) über den Schalter-Trick
-  let sw = null;
+  // Vibration: Android per Vibration API (erst nach der ersten Berührung erlaubt). Auf dem iPhone vibrieren die durchsichtigen Schalter in app.js.
   function buzz(pattern, force) {
     if (!on || (!force && quiet())) return;
-    try {
-      if (navigator.vibrate) { if (!navigator.userActivation || navigator.userActivation.hasBeenActive) navigator.vibrate(pattern); return; }   // Android: erst nach der ersten Berührung erlaubt
-      if (!sw) {
-        sw = document.createElement('label');
-        sw.setAttribute('aria-hidden', 'true');
-        sw.style.cssText = 'position:fixed;left:-60px;top:0;width:44px;height:30px;opacity:.01;pointer-events:none;';
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.setAttribute('switch', '');
-        sw.appendChild(input);
-        document.head.appendChild(sw);
-      }
-      sw.click();
-      if (Array.isArray(pattern) && pattern.length > 1) setTimeout(() => sw.click(), 90);
-    } catch { /* Haptik nicht verfügbar */ }
+    try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(pattern); } catch { /* nicht verfügbar */ }
   }
 
-  document.documentElement.classList.toggle('nohz', !on);
   const Sfx = {
     isOn: () => on,
     setOn(v) {
