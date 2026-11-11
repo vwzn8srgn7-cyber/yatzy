@@ -220,7 +220,7 @@
     clearFx();
     save(); render();
     snapshotBest();
-    if (isMyTurn()) Sfx.turn();
+    if (isMyTurn()) { Sfx.turn(); myTurnText(); }
   }
 
   function onNetMsg(m) {
@@ -308,7 +308,7 @@
       pickPlayed = false;
     }
     if (s.phase === 'over' && prev.phase !== 'over') setTimeout(() => Sfx.win(), 250);
-    else if (!wasMine && isMyTurn() && s.current !== prev.current) setTimeout(() => Sfx.turn(), 350);
+    else if (!wasMine && isMyTurn() && s.current !== prev.current) setTimeout(() => { Sfx.turn(); myTurnText(); }, 350);
     save();
     maybeRecord();
     render();
@@ -539,9 +539,9 @@
     if (state.phase === 'game' || state.phase === 'over') render();
     clearTimeout(chatTimer);
     chatTimer = setTimeout(function tick() {
-      const now = Date.now(); let left = 0;
-      Object.keys(chatShow).forEach((k) => { if (chatShow[k].until <= now) delete chatShow[k]; else left++; });
-      if (state.phase === 'game' || state.phase === 'over') render();
+      const now = Date.now(); let left = 0, gone = false;
+      Object.keys(chatShow).forEach((k) => { if (chatShow[k].until <= now) { delete chatShow[k]; gone = true; } else left++; });
+      if (gone && (state.phase === 'game' || state.phase === 'over')) render();   // nur neu zeichnen, wenn etwas verschwindet (sonst startet die Animation immer wieder neu)
       if (left) chatTimer = setTimeout(tick, 400);
     }, 5100);
   }
@@ -608,7 +608,7 @@
     const players = state.players.map((p, i) => {
       const c = liveChat(i);
       return `
-      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}">${c && c.kind === 'emoji' ? `<div class="avatar emoji">${c.value}</div>` : avatar(p, i)}
+      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}">${c && c.kind === 'emoji' ? `<div class="avatar emoji"><span class="em e${CHAT_EMOJIS.indexOf(c.value)}">${c.value}</span></div>` : avatar(p, i)}
         <div style="min-width:0"><div class="nm">${h(p.name)}</div><div class="dot" style="background:${COLORS[i]}"></div></div>
         ${c && c.kind === 'text' ? `<div class="chat-bubble">${h(c.value)}</div>` : ''}</div>`;
     }).join('');
@@ -727,6 +727,17 @@
       else startGame(state.players.map((p) => p.name));
     };
     el.querySelector('#wmenu').onclick = () => { el.remove(); if (isOnline()) leaveRoom(); else newGame(); };
+  }
+
+  // Kurzer „Du bist dran!“-Schriftzug über den Würfeln (nur online, nur bei dem, der dran ist)
+  function myTurnText() {
+    if (!state.online || state.phase !== 'game') return;
+    document.querySelectorAll('.my-turn').forEach((t) => t.remove());
+    const t = document.createElement('div');
+    t.className = 'my-turn';
+    t.textContent = 'Du bist dran!';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1700);
   }
 
   // Erinnerung, wenn der aktive Spieler 20 Sekunden nichts tut (online nur auf dem Gerät, das dran ist)
