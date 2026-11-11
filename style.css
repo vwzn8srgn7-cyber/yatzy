@@ -17,7 +17,7 @@ body {
   overscroll-behavior: none; user-select: none; -webkit-user-select: none;
   overflow: hidden;
 }
-#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; }
+#app { max-width: 480px; margin: 0 auto; height: 100dvh; position: relative; box-sizing: border-box; padding-top: env(safe-area-inset-top); }
 button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 /* ---------- Setup ---------- */
