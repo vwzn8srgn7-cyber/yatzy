@@ -10,10 +10,10 @@
   const app = document.getElementById('app');
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
   const DEFAULT_NAMES = ['Vreni', 'Peter', 'Marco', 'Gast'];
-  const COLORS = ['#2e8bd0', '#e0485a', '#4caf50', '#f2c14e']; // Blau, Rot, Grün, Gelb
+  const COLORS = ['#1b7cf0', '#f0223c', '#17b33a', '#ffc107']; // Blau, Rot, Grün, Gelb
   const ROW_ORDER = ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes', '_sum', '_bonus',
     'pair', 'twoPairs', 'three', 'four', 'small', 'large', 'full', 'chance', 'yatzy', '_total'];
-  const LABELS = { _sum: `Summe (${BONUS_THRESHOLD})`, _bonus: 'Bonus', _total: 'Gesamt', pair: '1 Paar', twoPairs: '2 Paare', three: '3 gleiche', four: '4 gleiche', small: 'Kleine Strasse', large: 'Grosse Strasse', yatzy: 'YATZY' };
+  const LABELS = { _sum: `Summe (${BONUS_THRESHOLD})`, _bonus: 'Bonus', _total: 'Gesamt', pair: '1 Paar', twoPairs: '2 Paare', three: '3 gleiche', four: '4 gleiche', small: 'Kleine Straße', large: 'Große Straße', yatzy: 'YATZY' };
   const EMPTY_DICE = () => [0, 0, 0, 0, 0];
   const NO_HOLD = () => [false, false, false, false, false];
 
@@ -55,7 +55,12 @@
   const h = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const label = (id) => LABELS[id] || CATEGORIES.find((c) => c.id === id).label;
   const initial = (p) => (/^Spieler \d$/.test(p.name) ? p.name.slice(-1) : p.name.slice(0, 1).toUpperCase());
-  const avatar = (p, i, cls = '') => `<div class="avatar ${cls}" style="background:${COLORS[i]}">${h(initial(p))}</div>`;
+  const PHOTOS = { Vreni: 'avatars/vreni.webp', Peter: 'avatars/peter.webp', Marco: 'avatars/marco.webp' };
+  // Fotos schon vorab laden und decodieren, damit die Avatare beim Neuzeichnen nicht kurz weiss aufblitzen
+  const photoCache = Object.values(PHOTOS).map((u) => { const im = new Image(); im.src = u; im.decode && im.decode().catch(() => {}); return im; });
+  const avatar = (p, i, cls = '') => PHOTOS[p.name]
+    ? `<div class="avatar photo ${cls}" style="background-image:url(${PHOTOS[p.name]});background-color:${COLORS[i]};border-color:${COLORS[i]}"></div>`
+    : `<div class="avatar ${cls}" style="background:${COLORS[i]}">${h(initial(p))}</div>`;
   const isOnline = () => !!state.online;
   const isMyTurn = () => !state.online || (state.players && state.players[state.current] && state.players[state.current].id === myId);
   const getPick = () => { try { return JSON.parse(localStorage.getItem(PICK_KEY)) || {}; } catch { return {}; } };
@@ -149,17 +154,17 @@
     el.innerHTML = `<span>🏆</span><div><b>Rekord geknackt!</b><small>${h(r.name)} · ${r.score} Punkte</small></div>`;
     document.body.appendChild(el);
     Sfx.rec();
-    setTimeout(() => el.remove(), 2600);
+    setTimeout(() => el.remove(), 3600);
   }
 
   function showRecord(recs) {
     const el = document.createElement('div');
     el.className = 'rec-fx';
     const conf = Array.from({ length: 36 }, (_, i) => `<i style="left:${Math.round(Math.random() * 100)}%;background:${COLORS[i % 4]};animation-delay:${(Math.random() * 0.9).toFixed(2)}s;--dx:${Math.round(Math.random() * 140 - 70)}px"></i>`).join('');
-    el.innerHTML = `${conf}<div class="rec-box"><div class="rec-t">🏆 Neuer Rekord</div>${recs.map((r) => `<div class="rec-n">${h(r.name)}</div><div class="rec-s">${r.score}</div>`).join('')}</div>`;
+    el.innerHTML = `${conf}<div class="rec-card"><div class="rec-ico">🏆</div><div class="rec-txt"><div class="rec-t">Neuer Rekord!</div>${recs.map((r) => `<div class="rec-l"><span>${h(r.name)}</span><b>${r.score}</b></div>`).join('')}</div></div>`;
     document.body.appendChild(el);
     Sfx.yatzy();
-    setTimeout(() => el.remove(), 4200);
+    setTimeout(() => el.remove(), 5200);
   }
 
   function boardRows() {
@@ -533,12 +538,12 @@
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
   }
-  const LOGO_COLORS = ['#2e8bd0', '#e0485a', '#4caf50', '#f2c14e', '#2e8bd0'];
+  const LOGO_COLORS = ['#1b7cf0', '#f0223c', '#17b33a', '#ffc107', '#1b7cf0'];
   const LOGO_TILT = [-6, 4, -3, 5, -4];
   function logoHTML() {
     const die = `<svg class="logo-die" viewBox="0 0 64 64" aria-hidden="true"><g transform="rotate(-12 32 32)">
       <rect x="7" y="11" width="50" height="50" rx="13" fill="#0e4a29" opacity=".3"/><rect x="7" y="8" width="50" height="50" rx="13" fill="#b9c8b2"/><rect x="7" y="5" width="50" height="50" rx="13" fill="#fff"/>
-      <circle cx="21" cy="19" r="5.2" fill="#2e8bd0"/><circle cx="43" cy="19" r="5.2" fill="#e0485a"/><circle cx="32" cy="30" r="5.2" fill="#1c1917"/><circle cx="21" cy="41" r="5.2" fill="#4caf50"/><circle cx="43" cy="41" r="5.2" fill="#f2c14e"/></g></svg>`;
+      <circle cx="21" cy="19" r="5.2" fill="#1b7cf0"/><circle cx="43" cy="19" r="5.2" fill="#f0223c"/><circle cx="32" cy="30" r="5.2" fill="#1c1917"/><circle cx="21" cy="41" r="5.2" fill="#17b33a"/><circle cx="43" cy="41" r="5.2" fill="#ffc107"/></g></svg>`;
     const word = [...'YATZY'].map((c, i) => `<span style="--lc:${LOGO_COLORS[i]};--rot:${LOGO_TILT[i]}deg">${c}</span>`).join('');
     return `<div class="logo" role="img" aria-label="Yatzy">${die}<div class="wm">${word}</div></div>`;
   }
@@ -734,11 +739,14 @@
     const players = state.players.map((p, i) => {
       const c = liveChat(i);
       return `
-      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}">${c && c.kind === 'emoji' ? `<div class="avatar emoji"><span class="em e${CHAT_EMOJIS.indexOf(c.value)}">${c.value}</span></div>` : avatar(p, i)}
+      <div class="pl ${i === state.current ? 'cur' : ''} ${offline(p) ? 'off' : ''}" style="--ad:-${Date.now() % 1300}ms">${c && c.kind === 'emoji' ? `<div class="avatar emoji"><span class="em e${CHAT_EMOJIS.indexOf(c.value)}">${c.value}</span></div>` : avatar(p, i)}
         <div style="min-width:0"><div class="nm">${h(p.name)}</div><div class="dot" style="background:${COLORS[i]}"></div></div>
         ${c && c.kind === 'text' ? `<div class="chat-bubble">${h(c.value)}</div>` : ''}</div>`;
     }).join('');
 
+    const oldPl = app.querySelector('.players');   // Avatare nur neu bauen, wenn sich etwas an ihnen ändert (sonst zucken die Fotos beim Antippen)
+    const plT = performance.now(), plAnim = oldPl ? oldPl.getAnimations({ subtree: true }).map((a) => [a.effect.target, a.animationName, a.currentTime]) : [];
+    const plSig = players.replace(/--ad:[^"]*/g, '');
     app.innerHTML = `
       <div class="game ${n >= 4 ? 'many' : 'few'}">
         <section class="card" style="--ac:${curColor};--n:${cols}">${header}${rows}</section>
@@ -757,6 +765,12 @@
           </div>
         </aside>
       </div>`;
+    const newPl = app.querySelector('.players');
+    if (oldPl && oldPl.dataset.sig === plSig) {
+      newPl.replaceWith(oldPl);
+      // Einsetzen startet die Animationen neu: Puls und Ring dort weiterlaufen lassen, wo sie waren
+      oldPl.getAnimations({ subtree: true }).forEach((a) => { const o = plAnim.find((x) => x[0] === a.effect.target && x[1] === a.animationName); if (o) a.currentTime = o[2] + (performance.now() - plT); });
+    } else newPl.dataset.sig = plSig;
 
     app.querySelectorAll('[data-die]').forEach((b) => b.onclick = () => toggleHold(+b.dataset.die));
     if (has3d()) {   // 3D-Würfel: eine dauerhafte Zeichenfläche, die bei jedem Neuaufbau in den neuen Würfelbereich umzieht
@@ -867,17 +881,8 @@
     const after = seriesAfter(state.series, state.players);
     const list = state.players.map((p) => after.p[p.id]).filter(Boolean).sort((x, y) => y.wins - x.wins || y.best - x.best);
     const wins = (n) => `${n} ${n === 1 ? 'Sieg' : 'Siege'}`;
-    const topNow = Math.max(...state.players.map((p) => total(p.scores)));
-    const last = new Set(state.players.filter((p) => total(p.scores) === topNow).map((p) => p.name));   // Sieger dieses Spiels: Name grün
     const el = document.createElement('div');
-    if (after.games < SERIES_LEN) {
-      el.className = 'ser-pop mini';
-      el.innerHTML = `<b>Spiel ${after.games}/${SERIES_LEN}</b><div class="ser-chips">${list.map((e) => `<span${last.has(e.name) ? ' class="lw"' : ''}>${h(e.name)} <em>${e.wins}</em></span>`).join('')}</div>`;
-      el.onclick = () => el.remove();
-      document.body.appendChild(el);
-      setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 500); }, 7000);
-      return;
-    }
+    if (after.games < SERIES_LEN) return;
     const names = (arr) => arr.map((e) => h(e.name)).join(' & ');
     const topScore = Math.max(...list.map((e) => e.best)), topY = Math.max(...list.map((e) => e.yatzys));
     let rank = 0, prev = null;
@@ -897,23 +902,45 @@
     Sfx.rec();
   }
 
+  // Zwischenstand (Spiel 1–4 einer Serie): fester Streifen auf der Gewinnerseite, zwischen Rangliste und „Erneut spielen“
+  function seriesStrip() {
+    if (!isOnline() || state.players.length < 2) return '';
+    const after = seriesAfter(state.series, state.players);
+    if (after.games >= SERIES_LEN) return '';
+    const list = state.players.map((p) => after.p[p.id]).filter(Boolean).sort((x, y) => y.wins - x.wins || y.best - x.best);
+    const topNow = Math.max(...state.players.map((p) => total(p.scores)));
+    const last = new Set(state.players.filter((p) => total(p.scores) === topNow).map((p) => p.name));
+    return `<div class="ser-strip"><b>Zwischenstand · Spiel ${after.games}/${SERIES_LEN}</b><div class="ser-chips">${list.map((e) => `<span${last.has(e.name) ? ' class="lw"' : ''}>${h(e.name)} <em>${e.wins}</em></span>`).join('')}</div></div>`;
+  }
+  const waitNote = () => { const w = waitingPlayers(); return w.length ? `⏳ ${w.map((p) => h(p.name)).join(' und ')} ${w.length > 1 ? 'spielen' : 'spielt'} jetzt auch mit 😁` : ''; };
+
   function renderOver() {
+    const old = document.querySelector('.win');
+    if (old && old.dataset.gid === String(state.gameId)) {   // Seite steht schon: nicht neu aufbauen (sonst flackert sie), nur den Wartehinweis auffrischen
+      const t = isOnline() ? waitNote() : '', n = old.querySelector('.waitnote');
+      if (!t && n) n.remove();
+      else if (t && n) { if (n.innerHTML !== t) n.innerHTML = t; }
+      else if (t) old.querySelector('#again').insertAdjacentHTML('beforebegin', `<div class="waitnote">${t}</div>`);
+      return;
+    }
     const ranked = state.players.map((p, i) => ({ p, i, t: total(p.scores) })).sort((a, b) => b.t - a.t);
     const [w, ...rest] = ranked;
     const leaves = [[8, 6, -30], [62, 2, 15], [76, 30, -20], [2, 40, 25], [70, 62, 35], [20, 72, -10]]
       .map(([x, y, r]) => `<span class="leaf" style="left:${x}%;top:${y}%;transform:rotate(${r}deg)"></span>`).join('');
     const el = document.createElement('div');
     el.className = 'win';
+    el.dataset.gid = String(state.gameId);
     const conf = Array.from({ length: 28 }, (_, i) => `<i style="left:${Math.round(Math.random() * 100)}%;background:${COLORS[i % 4]};animation-duration:${(3 + Math.random() * 3).toFixed(1)}s;animation-delay:-${(Math.random() * 5).toFixed(1)}s"></i>`).join('');
     el.innerHTML = `<div class="confetti">${ranked.length > 1 ? conf : ''}</div>${leaves}
       <button class="round menu-btn" id="wmenu" aria-label="Zur Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h4.5v-5.5h3V20H18v-9.5"/></svg></button>
       ${crownSVG()}
-      <div class="big-avatar" style="background:${COLORS[w.i]}">${h(initial(w.p))}</div>
+      <div class="big-avatar" style="${PHOTOS[w.p.name] ? `background-image:url(${PHOTOS[w.p.name]})` : `background:${COLORS[w.i]}`}">${PHOTOS[w.p.name] ? '' : h(initial(w.p))}</div>
       <div class="banner">${ranked.length > 1 ? 'GEWINNER' : 'FERTIG'}</div>
       <div class="winner-name">${h(w.p.name)}</div>
       <div class="pts"><span id="wcount">0</span> PUNKTE</div>
       <div class="others">${rest.map((r, k) => `<div class="orow"><span class="medal">${['🥈', '🥉'][k] || (k + 2)}</span>${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
-      ${isOnline() && waitingPlayers().length ? `<div class="waitnote">⏳ ${waitingPlayers().map((p) => h(p.name)).join(' und ')} ${waitingPlayers().length > 1 ? 'spielen' : 'spielt'} jetzt auch mit 😁</div>` : ''}
+      ${seriesStrip()}
+      ${isOnline() && waitNote() ? `<div class="waitnote">${waitNote()}</div>` : ''}
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
     document.body.appendChild(el);
     // Punkte des Gewinners zählen hoch
@@ -1017,7 +1044,8 @@
 
   function render() {
     armIdle();
-    document.querySelectorAll('.win').forEach((o) => o.remove());
+    const keepWin = state.phase === 'over' && document.querySelector('.win')?.dataset.gid === String(state.gameId);
+    if (!keepWin) document.querySelectorAll('.win').forEach((o) => o.remove());
     if (state.phase === 'setup') renderSetup();
     else if (state.phase === 'lobby') renderLobby();
     else { renderGame(); if (state.phase === 'over') renderOver(); }
