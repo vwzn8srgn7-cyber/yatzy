@@ -335,8 +335,8 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 
 /* mittig */
 /* Einblendung mitten auf dem Bildschirm */
-.my-turn { position: fixed; left: 50%; top: 45%; margin: 0; z-index: 55; pointer-events: none; padding: 16px 30px; border-radius: 999px; background: #fff; color: #4c9a1f;
-  font: 800 34px/1 "Nunito", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+.my-turn { position: fixed; left: 50%; top: 45%; margin: 0; z-index: 55; pointer-events: none; padding: 12px 24px; border-radius: 999px; background: #fff; color: #4c9a1f;
+  font: 800 26px/1 "Nunito", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3);
   animation: myTurn 1.7s ease-out forwards; }
 @keyframes myTurn { 0% { opacity: 0; transform: translate(-50%,-40%) scale(.8) rotate(-3deg); } 15% { opacity: 1; transform: translate(-50%,-50%) scale(1.1) rotate(-3deg); }
   25% { transform: translate(-50%,-50%) scale(1) rotate(-3deg); } 80% { opacity: 1; transform: translate(-50%,-54%) rotate(-3deg); } 100% { opacity: 0; transform: translate(-50%,-70%) rotate(-3deg); } }
@@ -491,3 +491,11 @@ html.nohz input.hz { display: none; }
 .pl.cur { z-index: 3; }
 /* Puls und Ring des aktiven Avatars laufen beim Neuzeichnen im selben Takt weiter (kein Aufblitzen) */
 .pl.cur .avatar, .pl.cur .avatar::after { animation-delay: var(--ad, 0s); }
+
+/* Gleichstand: mehrere Sieger nebeneinander */
+.win .big-avatars { display: flex; justify-content: center; z-index: 1; }
+.win .big-avatars .big-avatar.tie { width: 112px; height: 112px; border-width: 6px; font-size: 52px; margin: 0 -10px; }
+.win .big-avatars.n3 .big-avatar.tie { width: 92px; height: 92px; border-width: 5px; font-size: 42px; margin: 0 -8px; }
+.win .big-avatars.n4 .big-avatar.tie { width: 80px; height: 80px; border-width: 5px; font-size: 36px; margin: 0 -8px; }
+.win .banner.tie { width: 270px; font-size: 25px; }
+.win .winner-name.sm { font-size: 26px; white-space: normal; text-align: center; line-height: 1.15; }

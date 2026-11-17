@@ -202,7 +202,7 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
   function setDice(values, held) {
     const cancel = values.some((v) => !v) && mode === 'rolling';
     if (mode === 'rolling' && !cancel) { pendingSet = { values: values.slice(), held: held.slice() }; dice.forEach((d, i) => { if (!d.roll) applyOne(d, values[i], !!held[i]); }); return; }
-    if (cancel) { dice.forEach((d) => { d.roll = null; }); mode = 'idle'; }
+    if (cancel) { dice.forEach((d) => { d.roll = null; }); mode = 'idle'; setTimeout(() => window.dispatchEvent(new Event('dice3d-settled')), 0); }
     dice.forEach((d, i) => applyOne(d, values[i], !!held[i]));
     requestRender();
   }
@@ -284,6 +284,7 @@ import { RoundedBoxGeometry } from './vendor/RoundedBoxGeometry.js';
       dice.forEach((d) => { if (stepRoll(d)) moving = true; });
       if (clock >= rollEnd) {
         mode = 'idle';
+        setTimeout(() => window.dispatchEvent(new Event('dice3d-settled')), 0);   // Würfel liegen: das Spiel zeigt jetzt die Punkte-Blasen
         dice.forEach(syncAux);
         if (pendingSet) { const s = pendingSet; pendingSet = null; dice.forEach((d, i) => applyOne(d, s.values[i], !!s.held[i])); }
       }

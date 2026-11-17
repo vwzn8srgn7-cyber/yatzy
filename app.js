@@ -252,7 +252,7 @@
   const presenceSt = () => (state.phase === 'game' ? 'game' : state.phase === 'over' ? 'over' : 'lobby');
 
   // ---------- Serie: Zwischenstand über bis zu 5 Online-Spiele ----------
-  const SERIES_LEN = Number(new URLSearchParams(location.search).get('serie')) || 5;   // ?serie=2 nur zum Ausprobieren
+  const SERIES_LEN = Number(new URLSearchParams(location.search).get('serie')) || 4;   // ?serie=2 nur zum Ausprobieren
   const emptySeries = () => ({ games: 0, p: {} });
   // Stand der Serie nach dem (beendeten) aktuellen Spiel; ändert nichts am Original
   function seriesAfter(s, players) {
@@ -265,7 +265,7 @@
       const e = out.p[p.id] || (out.p[p.id] = { name: p.name, wins: 0, yatzys: 0, best: 0, games: 0 });
       e.name = p.name; e.games++;
       if (totals[i] === top) e.wins++;
-      if ((p.scores.yatzy || 0) > 0) e.yatzys++;
+      e.yatzys += p.y !== undefined ? p.y : ((p.scores.yatzy || 0) > 0 ? 1 : 0);   // jedes „5 gleiche“ zählt, auch wenn das Yatzy-Feld schon belegt war
       e.best = Math.max(e.best, totals[i]);
     });
     return out;
@@ -419,6 +419,7 @@
     pendingRoll = justRolled.some(Boolean) && s.dice.some(Boolean) ? { values: s.dice.slice(), mask: justRolled.slice() } : null;
     state = { ...state, ...s };
     busy = false;
+    document.querySelectorAll('.my-turn:not([data-keep])').forEach((t) => t.remove());   // „… ist dran“ verschwindet, sobald der aktive Spieler etwas gemacht hat
     // Töne für Züge der anderen
     if (s.current === prev.current && s.rollsLeft < prev.rollsLeft) { if (!has3d()) Sfx.roll(); }
     else if (s.current !== prev.current || (s.phase === 'over' && prev.phase !== 'over')) {
@@ -494,7 +495,7 @@
 
   function commit(catId) {
     const players = state.players.map((pl, i) =>
-      i === state.current ? { ...pl, scores: { ...pl.scores, [catId]: score(catId, state.dice) } } : pl);
+      i === state.current ? { ...pl, scores: { ...pl.scores, [catId]: score(catId, state.dice) }, y: (pl.y || 0) + (state.dice.every((d) => d && d === state.dice[0]) ? 1 : 0) } : pl);   // y: wie oft 5 gleiche gewürfelt wurden (zählt nur für die Serien-Auswertung, nicht im Spiel)
     const done = players.every((pl) => Object.keys(pl.scores).length === CATEGORIES.length);
     justRolled = []; busy = false;
     set({
@@ -708,7 +709,8 @@
     const mine = isMyTurn();
     const curColor = COLORS[state.current];
     const curName = state.players[state.current].name;
-    const actives = rolled && state.phase === 'game'; // Vorschau für alle: Blasen für den, der dran ist, Zahlen für die anderen
+    const settling = has3d() && (!!pendingRoll || Dice3D.busy());   // Würfel rollen noch: Punkte erst zeigen, wenn sie liegen
+    const actives = rolled && state.phase === 'game' && !settling; // Vorschau für alle: Blasen für den, der dran ist, Zahlen für die anderen
     let optIndex = 0;
 
     const header = `<div class="row hd" style="--n:${cols}"><span></span>${COLORS.slice(0, n).map((c) => `<span class="c" style="background:${c}"></span>`).join('')}${pad('<span class="c"></span>')}</div>`;
@@ -879,7 +881,7 @@
       <circle cx="55" cy="12" r="5" fill="#e0222b"/><circle cx="14" cy="22" r="4" fill="#e0222b"/><circle cx="96" cy="22" r="4" fill="#e0222b"/></svg>`;
   }
 
-  // Zwischenstand nach jedem Online-Spiel (klein, blendet sich aus) und Abrechnung nach 5 Spielen (kompakt, mit X)
+  // Zwischenstand nach jedem Online-Spiel (klein, blendet sich aus) und Abrechnung nach 4 Spielen (kompakt, mit X)
   let seriesShownFor = null;
   function showSeriesPopup(gid) {
     if (state.gameId !== gid || state.phase !== 'over' || !state.online) return;
@@ -930,7 +932,11 @@
       return;
     }
     const ranked = state.players.map((p, i) => ({ p, i, t: total(p.scores) })).sort((a, b) => b.t - a.t);
-    const [w, ...rest] = ranked;
+    const tops = ranked.filter((r) => r.t === ranked[0].t);   // bei Gleichstand teilen sich alle Besten den Sieg
+    const tie = ranked.length > 1 && tops.length > 1;
+    const w = ranked[0], rest = ranked.filter((r) => r.t < ranked[0].t);
+    const place = (r) => 1 + ranked.filter((q) => q.t > r.t).length;
+    const bigAv = (r) => `<div class="big-avatar${tie ? ' tie' : ''}" style="${PHOTOS[r.p.name] ? `background-image:url(${PHOTOS[r.p.name]})` : `background:${COLORS[r.i]}`}">${PHOTOS[r.p.name] ? '' : h(initial(r.p))}</div>`;
     const leaves = [[8, 6, -30], [62, 2, 15], [76, 30, -20], [2, 40, 25], [70, 62, 35], [20, 72, -10]]
       .map(([x, y, r]) => `<span class="leaf" style="left:${x}%;top:${y}%;transform:rotate(${r}deg)"></span>`).join('');
     const el = document.createElement('div');
@@ -940,11 +946,11 @@
     el.innerHTML = `<div class="confetti">${ranked.length > 1 ? conf : ''}</div>${leaves}
       <button class="round menu-btn" id="wmenu" aria-label="Zur Startseite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h4.5v-5.5h3V20H18v-9.5"/></svg></button>
       ${crownSVG()}
-      <div class="big-avatar" style="${PHOTOS[w.p.name] ? `background-image:url(${PHOTOS[w.p.name]})` : `background:${COLORS[w.i]}`}">${PHOTOS[w.p.name] ? '' : h(initial(w.p))}</div>
-      <div class="banner">${ranked.length > 1 ? 'GEWINNER' : 'FERTIG'}</div>
-      <div class="winner-name">${h(w.p.name)}</div>
+      ${tie ? `<div class="big-avatars n${tops.length}">${tops.map(bigAv).join('')}</div>` : bigAv(w)}
+      <div class="banner${tie ? ' tie' : ''}">${ranked.length < 2 ? 'FERTIG' : tie ? 'UNENTSCHIEDEN' : 'GEWINNER'}</div>
+      <div class="winner-name${tops.length > 2 ? ' sm' : ''}">${tie ? tops.map((r) => h(r.p.name)).join(' &amp; ') : h(w.p.name)}</div>
       <div class="pts"><span id="wcount">0</span> PUNKTE</div>
-      <div class="others">${rest.map((r, k) => `<div class="orow"><span class="medal">${['🥈', '🥉'][k] || (k + 2)}</span>${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
+      <div class="others">${rest.map((r) => `<div class="orow"><span class="medal">${['🥇', '🥈', '🥉'][place(r) - 1] || place(r)}</span>${avatar(r.p, r.i)}<span class="nm">${h(r.p.name)}</span><span class="p">${r.t} PUNKTE</span></div>`).join('')}</div>
       ${seriesStrip()}
       ${isOnline() && waitNote() ? `<div class="waitnote">${waitNote()}</div>` : ''}
       <button class="lime-btn again" id="again">Erneut spielen</button>`;
@@ -963,7 +969,7 @@
     el.querySelector('#again').onclick = () => {
       el.remove();
       if (isOnline()) {
-        // Neue Runde mit den Wartenden dazu; neue Person: Serie von vorn, sonst weiterzählen (nach 5 Spielen neue Serie)
+        // Neue Runde mit den Wartenden dazu; neue Person: Serie von vorn, sonst weiterzählen (nach 4 Spielen neue Serie)
         const nx = nextPlayers();
         const after = seriesAfter(state.series, state.players);
         startOnlineGame(nx.players, nx.joined || after.games >= SERIES_LEN ? emptySeries() : after);
@@ -1036,6 +1042,8 @@
   }
 
   // Erinnerung, wenn der aktive Spieler 20 Sekunden nichts tut (online nur auf dem Gerät, das dran ist)
+  // „Du bist dran“ / „… ist dran“ verschwindet, sobald auf dem Gerät etwas angetippt wird
+  document.addEventListener('pointerdown', () => document.querySelectorAll('.my-turn:not([data-keep])').forEach((t) => t.remove()), true);
   function showTurnToast(text) { bigBanner(text, 2600); }
   let idleTimer = null;
   function armIdle(first = 10000) {   // erste Erinnerung nach 10 Sekunden
@@ -1062,6 +1070,7 @@
   }
 
   // 3D-Würfel werden als eigenes Modul geladen; sobald sie bereit sind, zeichnet sich das Spiel einmal neu
+  window.addEventListener('dice3d-settled', () => { if (state.phase === 'game') render(); });
   window.addEventListener('dice3d-ready', () => { Dice3D.onTap((i) => toggleHold(i)); if (state.phase === 'game' || state.phase === 'over') render(); });
   if (window.Dice3D) Dice3D.onTap((i) => toggleHold(i));
 
