@@ -5,6 +5,8 @@ on:
   schedule:
     - cron: '17 6 * * 1,4'
   workflow_dispatch:
+permissions:
+  actions: write   # nur, damit sich der Ping selbst wieder einschalten kann (siehe letzter Schritt)
 jobs:
   ping:
     runs-on: ubuntu-latest
@@ -18,3 +20,9 @@ jobs:
           test "$code" = "200"
         env:
           KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5a3FkcHppZXN1aWVqZWt3cGloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxODk3NjQsImV4cCI6MjEwOTc2NTc2NH0.pNJPsTx7Cugj8II6KXpn3KgBNITmOHEHlSqUDxvaXRQ
+      # GitHub schaltet geplante Läufe nach ca. 60 Tagen ohne Änderung im Projekt ab. Dieser Schritt schaltet den Ping bei jedem Lauf
+      # selbst wieder ein, damit die 60 Tage neu zählen und der Ping dauerhaft weiterläuft.
+      - name: Ping am Leben halten
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/keepalive.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
