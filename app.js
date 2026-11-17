@@ -746,7 +746,7 @@
 
     const oldPl = app.querySelector('.players');   // Avatare nur neu bauen, wenn sich etwas an ihnen ändert (sonst zucken die Fotos beim Antippen)
     const plT = performance.now(), plAnim = oldPl ? oldPl.getAnimations({ subtree: true }).map((a) => [a.effect.target, a.animationName, a.currentTime]) : [];
-    const plSig = players.replace(/--ad:[^"]*/g, '');
+    const plSig = players.replace(/--ad:[^"]*/g, '').replace(/class="pl [^"]*"/g, 'class="pl"');   // „dran“ und „offline“ gehören nicht zur Signatur
     app.innerHTML = `
       <div class="game ${n >= 4 ? 'many' : 'few'}">
         <section class="card" style="--ac:${curColor};--n:${cols}">${header}${rows}</section>
@@ -768,6 +768,12 @@
     const newPl = app.querySelector('.players');
     if (oldPl && oldPl.dataset.sig === plSig) {
       newPl.replaceWith(oldPl);
+      // Spielerwechsel: nur die Markierungen umschalten, die Avatare (und ihre Fotos) bleiben stehen
+      oldPl.querySelectorAll('.pl').forEach((e, i) => {
+        e.classList.toggle('cur', i === state.current);
+        e.classList.toggle('off', !!offline(state.players[i]));
+        if (e.classList.contains('cur') && !plAnim.some((x) => x[0] === e.querySelector('.avatar'))) e.style.setProperty('--ad', `-${Date.now() % 1300}ms`);
+      });
       // Einsetzen startet die Animationen neu: Puls und Ring dort weiterlaufen lassen, wo sie waren
       oldPl.getAnimations({ subtree: true }).forEach((a) => { const o = plAnim.find((x) => x[0] === a.effect.target && x[1] === a.animationName); if (o) a.currentTime = o[2] + (performance.now() - plT); });
     } else newPl.dataset.sig = plSig;
